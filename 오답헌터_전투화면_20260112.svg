@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700" width="400" height="700">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f1a"/>
+      <stop offset="100%" style="stop-color:#0a0a0f"/>
+    </linearGradient>
+
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#818cf8"/>
+    </linearGradient>
+
+    <linearGradient id="hpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#4ade80"/>
+    </linearGradient>
+
+    <linearGradient id="enemyHpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ef4444"/>
+      <stop offset="100%" style="stop-color:#f87171"/>
+    </linearGradient>
+
+    <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#fcd34d"/>
+    </linearGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a24"/>
+      <stop offset="100%" style="stop-color:#12121a"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="700" fill="url(#bgGrad)"/>
+
+  <!-- Grid Pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(99,102,241,0.05)" stroke-width="1"/>
+  </pattern>
+  <rect width="400" height="700" fill="url(#grid)"/>
+
+  <!-- Top Status Bar -->
+  <rect x="0" y="0" width="400" height="80" fill="#12121a"/>
+  <line x1="0" y1="80" x2="400" y2="80" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+
+  <!-- Player HP -->
+  <text x="20" y="30" fill="#94a3b8" font-family="system-ui" font-size="12" font-weight="500">HP</text>
+  <rect x="45" y="18" width="150" height="18" rx="9" fill="rgba(255,255,255,0.1)"/>
+  <rect x="45" y="18" width="120" height="18" rx="9" fill="url(#hpGrad)"/>
+  <text x="205" y="31" fill="#e2e8f0" font-family="system-ui" font-size="13" font-weight="600">80%</text>
+
+  <!-- Level -->
+  <rect x="260" y="15" width="60" height="24" rx="12" fill="url(#accentGrad)"/>
+  <text x="290" y="32" fill="#fff" font-family="system-ui" font-size="12" font-weight="700" text-anchor="middle">LV.12</text>
+
+  <!-- Gold -->
+  <text x="335" y="31" fill="#fbbf24" font-family="system-ui" font-size="14" font-weight="600">💰 1,240</text>
+
+  <!-- Stage Info -->
+  <text x="20" y="60" fill="#e2e8f0" font-family="system-ui" font-size="14" font-weight="600">스테이지 3/10</text>
+
+  <!-- Combo -->
+  <rect x="280" y="45" width="100" height="24" rx="12" fill="rgba(251,191,36,0.2)"/>
+  <text x="330" y="62" fill="#fbbf24" font-family="system-ui" font-size="12" font-weight="600" text-anchor="middle">🔥 5 COMBO</text>
+
+  <!-- Enemy Area -->
+  <rect x="20" y="100" width="360" height="200" rx="20" fill="url(#cardGrad)" filter="url(#shadow)"/>
+  <rect x="20" y="100" width="360" height="200" rx="20" fill="none" stroke="rgba(99,102,241,0.2)" stroke-width="1"/>
+
+  <!-- Enemy Character -->
+  <circle cx="200" cy="170" r="45" fill="rgba(239,68,68,0.1)"/>
+  <circle cx="200" cy="170" r="35" fill="rgba(239,68,68,0.2)"/>
+  <text x="200" y="180" fill="#fff" font-size="40" text-anchor="middle">👾</text>
+
+  <!-- Enemy Name -->
+  <text x="200" y="235" fill="#e2e8f0" font-family="system-ui" font-size="16" font-weight="700" text-anchor="middle">방정식 슬라임</text>
+
+  <!-- Enemy HP Bar -->
+  <rect x="100" y="250" width="200" height="12" rx="6" fill="rgba(255,255,255,0.1)"/>
+  <rect x="100" y="250" width="130" height="12" rx="6" fill="url(#enemyHpGrad)"/>
+  <text x="200" y="280" fill="#94a3b8" font-family="system-ui" font-size="11" text-anchor="middle">HP 65%</text>
+
+  <!-- Question Card -->
+  <rect x="20" y="320" width="360" height="160" rx="20" fill="url(#cardGrad)" filter="url(#shadow)"/>
+  <rect x="20" y="320" width="360" height="160" rx="20" fill="none" stroke="url(#accentGrad)" stroke-width="2"/>
+
+  <!-- Question Badge -->
+  <rect x="160" y="308" width="80" height="24" rx="12" fill="url(#accentGrad)"/>
+  <text x="200" y="325" fill="#fff" font-family="system-ui" font-size="11" font-weight="600" text-anchor="middle">QUESTION</text>
+
+  <!-- Question Text -->
+  <text x="200" y="380" fill="#e2e8f0" font-family="system-ui" font-size="22" font-weight="700" text-anchor="middle">x² - 5x + 6 = 0</text>
+  <text x="200" y="420" fill="#94a3b8" font-family="system-ui" font-size="16" text-anchor="middle">x의 값을 구하시오</text>
+
+  <!-- Timer -->
+  <rect x="150" y="445" width="100" height="28" rx="14" fill="rgba(251,191,36,0.15)"/>
+  <text x="200" y="465" fill="#fbbf24" font-family="system-ui" font-size="16" font-weight="700" text-anchor="middle">⏱️ 00:23</text>
+
+  <!-- Answer Buttons -->
+  <!-- Option 1 -->
+  <rect x="20" y="510" width="85" height="70" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
+  <rect x="20" y="510" width="85" height="70" rx="16" fill="none" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+  <text x="62" y="555" fill="#e2e8f0" font-family="system-ui" font-size="24" font-weight="700" text-anchor="middle">2</text>
+
+  <!-- Option 2 -->
+  <rect x="115" y="510" width="85" height="70" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
+  <rect x="115" y="510" width="85" height="70" rx="16" fill="none" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+  <text x="157" y="555" fill="#e2e8f0" font-family="system-ui" font-size="24" font-weight="700" text-anchor="middle">3</text>
+
+  <!-- Option 3 (Highlighted/Selected) -->
+  <rect x="210" y="510" width="85" height="70" rx="16" fill="rgba(99,102,241,0.2)" filter="url(#shadow)"/>
+  <rect x="210" y="510" width="85" height="70" rx="16" fill="none" stroke="url(#accentGrad)" stroke-width="2"/>
+  <text x="252" y="555" fill="#818cf8" font-family="system-ui" font-size="24" font-weight="700" text-anchor="middle">2, 3</text>
+
+  <!-- Option 4 -->
+  <rect x="305" y="510" width="85" height="70" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
+  <rect x="305" y="510" width="85" height="70" rx="16" fill="none" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+  <text x="347" y="555" fill="#e2e8f0" font-family="system-ui" font-size="24" font-weight="700" text-anchor="middle">-2</text>
+
+  <!-- Bottom Action Bar -->
+  <rect x="0" y="610" width="400" height="90" fill="#12121a"/>
+  <line x1="0" y1="610" x2="400" y2="610" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+
+  <!-- Hint Button -->
+  <rect x="20" y="625" width="110" height="50" rx="12" fill="rgba(251,191,36,0.15)"/>
+  <rect x="20" y="625" width="110" height="50" rx="12" fill="none" stroke="rgba(251,191,36,0.5)" stroke-width="1"/>
+  <text x="75" y="657" fill="#fbbf24" font-family="system-ui" font-size="14" font-weight="600" text-anchor="middle">💡 힌트 50G</text>
+
+  <!-- Skip Button -->
+  <rect x="145" y="625" width="110" height="50" rx="12" fill="rgba(239,68,68,0.15)"/>
+  <rect x="145" y="625" width="110" height="50" rx="12" fill="none" stroke="rgba(239,68,68,0.5)" stroke-width="1"/>
+  <text x="200" y="657" fill="#ef4444" font-family="system-ui" font-size="14" font-weight="600" text-anchor="middle">⏭️ 스킵</text>
+
+  <!-- Pause Button -->
+  <rect x="270" y="625" width="110" height="50" rx="12" fill="rgba(99,102,241,0.15)"/>
+  <rect x="270" y="625" width="110" height="50" rx="12" fill="none" stroke="rgba(99,102,241,0.5)" stroke-width="1"/>
+  <text x="325" y="657" fill="#818cf8" font-family="system-ui" font-size="14" font-weight="600" text-anchor="middle">⏸️ 일시정지</text>
+
+  <!-- Decorative Elements -->
+  <!-- Top Left Corner -->
+  <path d="M 0 20 L 0 0 L 20 0" fill="none" stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Top Right Corner -->
+  <path d="M 380 0 L 400 0 L 400 20" fill="none" stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Bottom Left Corner -->
+  <path d="M 0 680 L 0 700 L 20 700" fill="none" stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Bottom Right Corner -->
+  <path d="M 380 700 L 400 700 L 400 680" fill="none" stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round"/>
+
+</svg>

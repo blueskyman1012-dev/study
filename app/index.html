@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>오답헌터</title>
+  <link rel="stylesheet" href="/src/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <!-- 오답등록 버튼 -->
+    <button id="register-btn">📸 오답 등록</button>
+  </div>
+
+  <!-- iOS용 파일 입력 -->
+  <input type="file" id="camera-input" accept="image/*" capture="environment" style="position:absolute;left:-9999px;">
+
+  <!-- Android용 카메라 모달 -->
+  <div id="camera-modal" style="display:none;">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div id="camera-controls">
+      <button id="camera-capture">📷 촬영</button>
+      <button id="camera-close">✕ 닫기</button>
+    </div>
+  </div>
+  <canvas id="capture-canvas" style="display:none;"></canvas>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

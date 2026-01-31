@@ -1,0 +1,30 @@
+ ngrok은 이제 계정 인증이 필요합니다. 다음 단계를 따라주세요:
+
+  ---
+  1. ngrok 계정 가입
+
+  https://dashboard.ngrok.com/signup 접속 → 가입 (Google 로그인 가능)
+
+  ---
+  2. authtoken 복사
+
+  https://dashboard.ngrok.com/get-started/your-authtoken 접속 → 토큰 복사
+
+  ---
+  3. authtoken 등록
+
+  PowerShell에서:
+  ngrok config add-authtoken 여기에_복사한_토큰_붙여넣기
+
+  ---
+  4. 다시 실행
+
+  ngrok http 9333
+
+  ---
+  계정 가입 후 진행해주세요.
+
+PS C:\Users\ccang> ngrok config add-authtoken 38QvtELpsdpdL8OvWbPBpbUcLIH_QNnrsjqFk6Dh8NhoXTdb
+Authtoken saved to configuration file: C:\Users\ccang\AppData\Local/ngrok/ngrok.yml
+PS C:\Users\ccang>
+
