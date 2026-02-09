@@ -93,6 +93,7 @@ export class InputManager {
           adjustedY >= area.y && adjustedY <= area.y + area.height) {
         this._dragging = { id: area.id, handler: area.callback };
         area.callback(canvasX, adjustedY);
+        this.game._needsRender = true;
         return;
       }
     }

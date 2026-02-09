@@ -194,8 +194,21 @@ export class StatsManager {
       stats.recentAccuracy = recentTotal > 0 ? Math.round((recentCorrect / recentTotal) * 100) : 0;
     }
 
+    // 정적 topic→subject 매핑 (폴백)
+    const KNOWN_TOPIC_SUBJECTS = {
+      '일차방정식': 'math', '이차방정식': 'math', '인수분해': 'math',
+      '함수': 'math', '부등식': 'math', '분수 계산': 'math',
+      '비율/퍼센트': 'math', '수열': 'math', '확률': 'math', '도형': 'math',
+      '힘과 운동': 'science', '화학반응': 'science', '세포': 'science',
+      '지구과학': 'science', '역학': 'science', '전자기': 'science',
+      '몰과 반응식': 'science', '유전': 'science'
+    };
+
     // 몬스터 과목별/난이도별 집계
+    const topicToSubject = {};
+    const monstersById = {};
     for (const m of monsters) {
+      if (m.id) monstersById[m.id] = m;
       const subj = m.subject || 'math';
       stats.bySubject[subj] = (stats.bySubject[subj] || 0) + 1;
       const diff = m.difficulty || 2;
@@ -216,16 +229,48 @@ export class StatsManager {
         stats.difficultyAccuracy[diff].correct += (m.stats?.correct || 0);
       }
 
-      // 과목별 유형(topic) 통계
-      const topic = m.topic;
-      if (topic) {
-        if (!stats.subjectTopics[subj]) stats.subjectTopics[subj] = {};
-        if (!stats.subjectTopics[subj][topic]) {
-          stats.subjectTopics[subj][topic] = { attempts: 0, correct: 0 };
-        }
-        stats.subjectTopics[subj][topic].attempts += (m.stats?.attempts || 0);
-        stats.subjectTopics[subj][topic].correct += (m.stats?.correct || 0);
+      // topic→subject 매핑 구축
+      if (m.topic) {
+        topicToSubject[m.topic] = subj;
       }
+    }
+
+    // 1차: defeatedMonsters에서 유형별 통계 구축 (모든 런 커버)
+    for (const run of sortedRuns) {
+      if (!run.defeatedMonsters) continue;
+      for (const mId of run.defeatedMonsters) {
+        const m = monstersById[mId];
+        if (!m || !m.topic) continue;
+        const subj = m.subject || 'math';
+        if (!stats.subjectTopics[subj]) stats.subjectTopics[subj] = {};
+        if (!stats.subjectTopics[subj][m.topic]) {
+          stats.subjectTopics[subj][m.topic] = { attempts: 0, correct: 0 };
+        }
+        stats.subjectTopics[subj][m.topic].attempts++;
+        stats.subjectTopics[subj][m.topic].correct++;
+      }
+    }
+
+    // 2차: 런 기반 correctByTopic/wrongByTopic 병합 (더 정확한 데이터로 보정)
+    const allTopics = new Set([
+      ...Object.keys(stats.correctByTopic),
+      ...Object.keys(stats.wrongByTopic)
+    ]);
+    for (const topic of allTopics) {
+      const subj = topicToSubject[topic] || KNOWN_TOPIC_SUBJECTS[topic];
+      if (!subj) continue;
+
+      const runCorrect = stats.correctByTopic[topic] || 0;
+      const runWrong = stats.wrongByTopic[topic] || 0;
+      const runAttempts = runCorrect + runWrong;
+
+      if (!stats.subjectTopics[subj]) stats.subjectTopics[subj] = {};
+      if (!stats.subjectTopics[subj][topic]) {
+        stats.subjectTopics[subj][topic] = { attempts: 0, correct: 0 };
+      }
+      const entry = stats.subjectTopics[subj][topic];
+      entry.attempts = Math.max(entry.attempts, runAttempts);
+      entry.correct = Math.max(entry.correct, runCorrect);
     }
 
     this.game.cachedStats = stats;
