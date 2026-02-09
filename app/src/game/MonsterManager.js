@@ -198,6 +198,12 @@ export class MonsterManager {
 
   // 오답 자동 생성
   generateWrongAnswers(answer) {
+    // 부등식 표현인 경우 부등호 변형으로 오답 생성
+    const ineqMatch = answer.match(/^(.*?)\s*([<>≤≥]=?|[≤≥])\s*(.+)$/);
+    if (ineqMatch) {
+      return this._generateInequalityWrongAnswers(answer, ineqMatch);
+    }
+
     const wrongAnswers = [];
     const num = parseFloat(answer);
     if (!isNaN(num)) {
@@ -221,6 +227,21 @@ export class MonsterManager {
       }
     }
     return wrongAnswers.slice(0, 3);
+  }
+
+  // 부등식 오답 생성 (부등호 방향/등호 변형)
+  _generateInequalityWrongAnswers(answer, match) {
+    const [, variable, op, value] = match;
+    const opMap = {
+      '>': ['<', '≥', '≤'],
+      '<': ['>', '≤', '≥'],
+      '>=': ['<=', '>', '<'],
+      '<=': ['>=', '<', '>'],
+      '≥': ['≤', '>', '<'],
+      '≤': ['≥', '<', '>'],
+    };
+    const wrongOps = opMap[op] || ['<', '>', '≤'];
+    return wrongOps.map(wop => `${variable} ${wop} ${value}`).slice(0, 3);
   }
 
   shuffleArray(array) {
@@ -570,7 +591,7 @@ export class MonsterManager {
       // 서버에 상태 업데이트 (serverId가 있으면 사용)
       if (apiService.isLoggedIn() && monster.serverId) {
         apiService.putMonster(monster.serverId, {
-          status: 'defeated',
+          status: 'cleared',
           defeated_at: new Date().toISOString()
         }).catch(() => {});
       }

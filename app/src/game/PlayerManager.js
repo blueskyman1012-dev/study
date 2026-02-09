@@ -138,8 +138,9 @@ export class PlayerManager {
       this.player.exp -= this.getExpForLevel(this.player.level);
       this.player.level++;
 
+      const oldMaxHp = this.player.maxHp;
       this.player.maxHp = this.getTotalMaxHp();
-      this.player.currentHp = this.player.maxHp;
+      this.player.currentHp = Math.min(this.player.currentHp + (this.player.maxHp - oldMaxHp), this.player.maxHp);
 
       SoundService.playLevelUp();
       console.log(`🎉 레벨업! LV.${this.player.level}`);

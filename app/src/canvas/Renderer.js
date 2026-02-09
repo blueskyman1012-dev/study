@@ -145,11 +145,13 @@ export const Renderer = {
     if (this._bgImage && this._bgImage.complete) return;
 
     if (!this._gridCache) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
       const theme = this._bgTheme || BG_THEMES[0];
       const offscreen = document.createElement('canvas');
-      offscreen.width = this.width;
-      offscreen.height = this.height;
+      offscreen.width = this.width * dpr;
+      offscreen.height = this.height * dpr;
       const oc = offscreen.getContext('2d');
+      oc.scale(dpr, dpr);
 
       // 주 그리드 (네온 효과)
       oc.strokeStyle = theme.grid;
@@ -174,7 +176,7 @@ export const Renderer = {
       }
       this._gridCache = offscreen;
     }
-    this.ctx.drawImage(this._gridCache, 0, 0);
+    this.ctx.drawImage(this._gridCache, 0, 0, this.width, this.height);
   },
 
   // 둥근 사각형
@@ -221,6 +223,7 @@ export const Renderer = {
         gradient.addColorStop(0, this.lightenColor(color, 30));
         gradient.addColorStop(0.5, color);
         gradient.addColorStop(1, this.darkenColor(color, 20));
+        this._evictGradientCache();
         this._gradientCache.set(gKey, gradient);
       }
 
@@ -270,10 +273,18 @@ export const Renderer = {
         gradient = this.ctx.createLinearGradient(x, y, x, y + h);
         gradient.addColorStop(0, this.lightenColor(color, 20));
         gradient.addColorStop(1, this.darkenColor(color, 10));
+        this._evictGradientCache();
         this._gradientCache.set(gKey, gradient);
       }
 
       this.roundRect(x, y, barWidth, h, safeRadius, gradient);
+    }
+  },
+
+  // 그라디언트 캐시 크기 제한 (50개 초과 시 전체 클리어)
+  _evictGradientCache() {
+    if (this._gradientCache.size > 50) {
+      this._gradientCache.clear();
     }
   },
 

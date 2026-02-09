@@ -360,8 +360,10 @@ class App {
   }
 
   setupCanvas() {
-    this.canvas.width = GAME_CONFIG.CANVAS_WIDTH;
-    this.canvas.height = GAME_CONFIG.CANVAS_HEIGHT;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    this.canvas.width = GAME_CONFIG.CANVAS_WIDTH * dpr;
+    this.canvas.height = GAME_CONFIG.CANVAS_HEIGHT * dpr;
+    this.ctx.scale(dpr, dpr);
     this.resizeCanvas();
   }
 
@@ -436,8 +438,8 @@ class App {
     // 마우스 드래그 (데스크탑 슬라이더)
     this.canvas.addEventListener('mousedown', (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = GAME_CONFIG.CANVAS_WIDTH / rect.width;
+      const scaleY = GAME_CONFIG.CANVAS_HEIGHT / rect.height;
       const canvasX = (e.clientX - rect.left) * scaleX;
       const canvasY = (e.clientY - rect.top) * scaleY;
       this.game.handleTouchStart(canvasX, canvasY);
@@ -448,7 +450,7 @@ class App {
     window.addEventListener('mousemove', (e) => {
       if (!this._mouseDragging) return;
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
+      const scaleX = GAME_CONFIG.CANVAS_WIDTH / rect.width;
       const canvasX = (e.clientX - rect.left) * scaleX;
       this.game.handleTouchMove(canvasX, 0);
     });
@@ -463,8 +465,8 @@ class App {
       e.preventDefault();
       const touch = e.touches[0];
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = GAME_CONFIG.CANVAS_WIDTH / rect.width;
+      const scaleY = GAME_CONFIG.CANVAS_HEIGHT / rect.height;
       const canvasX = (touch.clientX - rect.left) * scaleX;
       const canvasY = (touch.clientY - rect.top) * scaleY;
       this.game.handleTouchStart(canvasX, canvasY);
@@ -476,8 +478,8 @@ class App {
       e.preventDefault();
       const touch = e.touches[0];
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = GAME_CONFIG.CANVAS_WIDTH / rect.width;
+      const scaleY = GAME_CONFIG.CANVAS_HEIGHT / rect.height;
       const canvasX = (touch.clientX - rect.left) * scaleX;
       const canvasY = (touch.clientY - rect.top) * scaleY;
       this.game.handleTouchMove(canvasX, canvasY);
@@ -561,8 +563,8 @@ class App {
 
   handleInput(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.canvas.width / rect.width;
-    const scaleY = this.canvas.height / rect.height;
+    const scaleX = GAME_CONFIG.CANVAS_WIDTH / rect.width;
+    const scaleY = GAME_CONFIG.CANVAS_HEIGHT / rect.height;
 
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;

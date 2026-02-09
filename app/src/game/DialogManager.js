@@ -170,6 +170,12 @@ export class DialogManager {
     if (timeBonus > 0) timeDetail += ` + ${t('level')} ${timeBonus}`;
     if (player.permanentUpgrades?.time > 0) timeDetail += ` + ${t('upgrade')} ${player.permanentUpgrades.time * UPGRADES.time.value}`;
 
+    const goldBonusLevel = player.permanentUpgrades?.goldBonus || 0;
+    const goldBonusPercent = goldBonusLevel * UPGRADES.goldBonus.value;
+    const goldMultiplier = 100 + goldBonusPercent;
+    let goldDetail = `${t('base')} 100%`;
+    if (goldBonusPercent > 0) goldDetail += ` + ${t('upgrade')} ${goldBonusPercent}%`;
+
     const modal = document.createElement('div');
     modal.id = 'level-modal';
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; justify-content: center; align-items: center; font-family: system-ui, -apple-system, sans-serif;`;
@@ -193,6 +199,7 @@ export class DialogManager {
             <div>❤️ HP: <b>${totalHp}</b> <span style="color:#94a3b8; font-size:11px;">(${hpDetail})</span></div>
             <div>⚔️ ${t('attack')}: <b>${totalDamage}</b> <span style="color:#94a3b8; font-size:11px;">(${dmgDetail})</span></div>
             <div>⏱️ ${t('time')}: <b>${totalTime}${t('seconds')}</b> <span style="color:#94a3b8; font-size:11px;">(${timeDetail})</span></div>
+            <div>💰 ${t('stats_gold')}: <b>${goldMultiplier}%</b> <span style="color:#94a3b8; font-size:11px;">(${goldDetail})</span></div>
           </div>
         </div>
         <div style="background: rgba(251,191,36,0.1); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
@@ -202,8 +209,7 @@ export class DialogManager {
               ? `<div style="color:#fbbf24;font-weight:bold;">${t('maxLevelBonus')}</div>`
               : `<div>${t('level')} ${level + 1}: ❤️ HP +1</div>
             ${nextDamageLevel <= LEVEL_CONFIG.displayMaxLevel ? `<div>${t('level')} ${nextDamageLevel}: ⚔️ ${t('attack')} +${LEVEL_CONFIG.damagePerLevels}</div>` : ''}
-            ${nextTimeLevel <= LEVEL_CONFIG.displayMaxLevel ? `<div>${t('level')} ${nextTimeLevel}: ⏱️ ${t('time')} +${LEVEL_CONFIG.timePerLevels}${t('seconds')}</div>` : ''}
-            <div style="color:#94a3b8;font-size:12px;">${t('level')} 100: 🏆 ${t('maxLevelBonus')}</div>`}
+            ${nextTimeLevel <= LEVEL_CONFIG.displayMaxLevel ? `<div>${t('level')} ${nextTimeLevel}: ⏱️ ${t('time')} +${LEVEL_CONFIG.timePerLevels}${t('seconds')}</div>` : ''}`}
           </div>
         </div>
         <div style="background: rgba(99,102,241,0.1); border-radius: 10px; padding: 12px; margin-bottom: 15px;">

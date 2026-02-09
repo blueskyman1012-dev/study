@@ -320,7 +320,7 @@ export class BattleManager {
     game.lastTime = Date.now();
 
     if (this.player.currentHp <= 0) {
-      game.endRun(false);
+      await game.endRun(false);
     }
   }
 
@@ -386,7 +386,7 @@ export class BattleManager {
         game.playerManager.save();
         await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
       } else {
-        game.endRun(false);
+        await game.endRun(false);
         return;
       }
     }

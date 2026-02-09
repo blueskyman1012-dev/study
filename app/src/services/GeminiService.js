@@ -63,6 +63,7 @@ export class GeminiService {
 4. 보기가 없으면 choices는 빈 배열로 두세요
 5. 정답은 반드시 찾아서 answer에 넣으세요
 6. correctIndex는 choices 배열에서 정답의 위치 (0부터 시작)
+7. 부등식 문제: 정답은 반드시 부등식 표현으로 (예: "x > 4", "x ≤ -3"). 경계값 숫자만 쓰지 마세요.
 
 JSON 형식:
 {
@@ -183,6 +184,11 @@ JSON 형식:
 
   // 유사 문제 생성
   async generateSimilarProblems(question, answer, subject, count = 3) {
+    const isInequality = /부등식/.test(question) || /[<>≤≥]/.test(answer);
+    const inequalityRule = isInequality
+      ? `\n5. 부등식 문제: 정답은 반드시 부등식 표현 (예: "x > 4", "x ≤ -3"), 선택지도 부등식 표현으로 (부등호 방향/등호 바꿔서 오답 생성). 경계값 숫자만 정답으로 쓰지 마세요.`
+      : '';
+
     const prompt = `
 당신은 한국 고등학교 ${subject} 선생님입니다.
 학생이 다음 문제를 틀렸습니다. 비슷한 유형의 문제를 ${count}개 만들어주세요.
@@ -195,7 +201,7 @@ JSON 형식:
 1. 같은 개념을 다루지만 숫자나 상황을 바꿔서 출제
 2. 난이도: 쉬움 1개, 보통 1개, 어려움 1개
 3. 각 문제에 4지선다 보기 포함
-4. 수능/모의고사 스타일로 출제
+4. 수능/모의고사 스타일로 출제${inequalityRule}
 
 다음 JSON 형식으로만 응답하세요:
 {
@@ -220,6 +226,11 @@ JSON만 출력하고 다른 텍스트는 포함하지 마세요.
 
   // 새 문제 생성 (문제 은행 확장용)
   async generateNewProblems(subject, topic, count = 5) {
+    const isInequality = /부등식/.test(topic);
+    const inequalityRule = isInequality
+      ? `\n5. 부등식 문제: 정답은 반드시 부등식 표현 (예: "x > 4", "x ≤ -3"), 선택지도 부등식 표현으로 (부등호 방향/등호 바꿔서 오답 생성). 경계값 숫자만 정답으로 쓰지 마세요.`
+      : '';
+
     const prompt = `
 당신은 한국 고등학교 ${subject} 선생님입니다.
 "${topic}" 주제로 문제를 ${count}개 만들어주세요.
@@ -228,7 +239,7 @@ JSON만 출력하고 다른 텍스트는 포함하지 마세요.
 1. 수능/모의고사 스타일
 2. 다양한 난이도 (쉬움~어려움)
 3. 4지선다 객관식
-4. 고등학생 수준
+4. 고등학생 수준${inequalityRule}
 
 다음 JSON 형식으로만 응답하세요:
 {

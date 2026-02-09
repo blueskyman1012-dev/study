@@ -15,24 +15,24 @@ const TABS = [
   { labelKey: 'settingsTabData', icon: '📦' },
 ];
 
-export function renderSettingsScreen(game) {
-  Renderer.drawGrid();
+// ─── 고정 헤더 (Game.js에서 호출) ───
+export function renderSettingsFixedHeader(game) {
+  // 배경 (0~96)
+  Renderer.roundRect(0, 0, 400, 96, 0, COLORS.BG_SECONDARY);
 
-  // 헤더
-  Renderer.roundRect(0, 0, 400, 55, 0, COLORS.BG_SECONDARY);
+  // 제목 + 뒤로가기
   Renderer.drawText(t('settingsTitle'), 200, 18, { font: 'bold 18px system-ui', align: 'center' });
   Renderer.drawText(t('back'), 30, 20, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
   game.registerClickArea('back', 10, 10, 80, 35, () => game.changeScreen(SCREENS.MAIN));
 
-  // 탭 바
-  const tabY = 58;
+  // 탭 바 (y:55~91)
+  const tabY = 55;
   const tabH = 36;
   const tabW = Math.floor(400 / TABS.length);
   TABS.forEach((tab, i) => {
     const x = i * tabW;
     const isActive = i === currentTab;
     Renderer.roundRect(x, tabY, tabW, tabH, 0, isActive ? COLORS.ACCENT : COLORS.BG_CARD);
-    // 하단 인디케이터
     if (isActive) {
       Renderer.roundRect(x + 10, tabY + tabH - 3, tabW - 20, 3, 1.5, COLORS.ACCENT_LIGHT);
     }
@@ -48,8 +48,16 @@ export function renderSettingsScreen(game) {
       game.scrollMaxY = 0;
     });
   });
+}
 
-  const contentStartY = tabY + tabH + 12;
+export function renderSettingsScreen(game) {
+  Renderer.drawGrid();
+
+  // 뒤로가기 클릭 (스크롤 보정용)
+  game.registerClickArea('back', 10, 10, 80, 35, () => game.changeScreen(SCREENS.MAIN));
+
+  // 고정 헤더 높이 이후부터 콘텐츠 시작
+  const contentStartY = 106;
 
   switch (currentTab) {
     case 0: renderGameTab(game, contentStartY); break;
@@ -155,41 +163,41 @@ function renderApiTab(game, startY) {
   let y = startY;
 
   // SmilePrint API
-  Renderer.roundRect(20, y, 360, 120, 16, COLORS.BG_CARD);
-  Renderer.drawText(t('smilePrintApi'), 200, y + 25, { font: 'bold 14px system-ui', align: 'center' });
+  Renderer.roundRect(20, y, 360, 110, 16, COLORS.BG_CARD);
+  Renderer.drawText(t('smilePrintApi'), 200, y + 20, { font: 'bold 14px system-ui', align: 'center' });
 
   const hasSmilePrintKey = imageAnalysisService.hasApiKey();
-  Renderer.drawText(hasSmilePrintKey ? t('configured') : t('notConfigured'), 200, y + 50, {
+  Renderer.drawText(hasSmilePrintKey ? t('configured') : t('notConfigured'), 200, y + 42, {
     font: '12px system-ui', color: hasSmilePrintKey ? COLORS.SUCCESS : COLORS.DANGER, align: 'center'
   });
 
-  Renderer.drawButton(50, y + 70, 300, 40, t('inputSmilePrintKey'), { bgColor: COLORS.ACCENT, fontSize: 14 });
-  game.registerClickArea('setSmilePrintKey', 50, y + 70, 300, 40, () => game.promptSmilePrintApiKey());
-  y += 135;
+  Renderer.drawButton(50, y + 62, 300, 38, t('inputSmilePrintKey'), { bgColor: COLORS.ACCENT, fontSize: 14 });
+  game.registerClickArea('setSmilePrintKey', 50, y + 62, 300, 38, () => game.promptSmilePrintApiKey());
+  y += 120;
 
   // Gemini API
-  Renderer.roundRect(20, y, 360, 120, 16, COLORS.BG_CARD);
-  Renderer.drawText(t('geminiApi'), 200, y + 25, { font: 'bold 14px system-ui', align: 'center' });
+  Renderer.roundRect(20, y, 360, 110, 16, COLORS.BG_CARD);
+  Renderer.drawText(t('geminiApi'), 200, y + 20, { font: 'bold 14px system-ui', align: 'center' });
 
   const hasGeminiKey = geminiService.hasApiKey();
-  Renderer.drawText(hasGeminiKey ? t('configured') : t('notConfigured'), 200, y + 50, {
+  Renderer.drawText(hasGeminiKey ? t('configured') : t('notConfigured'), 200, y + 42, {
     font: '12px system-ui', color: hasGeminiKey ? COLORS.SUCCESS : COLORS.DANGER, align: 'center'
   });
 
-  Renderer.drawButton(50, y + 70, 145, 40, t('geminiKey'), {
+  Renderer.drawButton(50, y + 62, 145, 38, t('geminiKey'), {
     bgColor: COLORS.BG_SECONDARY, borderColor: COLORS.ACCENT, fontSize: 12
   });
-  game.registerClickArea('setApiKey', 50, y + 70, 145, 40, () => game.promptApiKey());
+  game.registerClickArea('setApiKey', 50, y + 62, 145, 38, () => game.promptApiKey());
 
-  Renderer.drawButton(205, y + 70, 145, 40, t('testGenerate'), {
+  Renderer.drawButton(205, y + 62, 145, 38, t('testGenerate'), {
     bgColor: COLORS.BG_SECONDARY, borderColor: COLORS.WARNING, fontSize: 12
   });
-  game.registerClickArea('testAI', 205, y + 70, 145, 40, () => game.testAIGeneration());
-  y += 135;
+  game.registerClickArea('testAI', 205, y + 62, 145, 38, () => game.testAIGeneration());
+  y += 120;
 
   // API 키 발급 안내
-  Renderer.roundRect(20, y, 360, 155, 16, COLORS.BG_CARD);
-  Renderer.drawText(t('apiGuide'), 200, y + 25, { font: 'bold 14px system-ui', align: 'center' });
+  Renderer.roundRect(20, y, 360, 145, 16, COLORS.BG_CARD);
+  Renderer.drawText(t('apiGuide'), 200, y + 20, { font: 'bold 14px system-ui', align: 'center' });
 
   const instructions = [
     t('smilePrintSection'), t('requestAdmin'), '',
@@ -197,21 +205,21 @@ function renderApiTab(game, startY) {
   ];
   instructions.forEach((text, i) => {
     const isBold = text.startsWith('[');
-    Renderer.drawText(text, 200, y + 50 + i * 18, {
+    Renderer.drawText(text, 200, y + 42 + i * 17, {
       font: isBold ? 'bold 11px system-ui' : '11px system-ui',
       color: isBold ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY, align: 'center'
     });
   });
-  y += 170;
+  y += 155;
 
   // AI 기능 설명
-  Renderer.roundRect(20, y, 360, 90, 16, COLORS.BG_CARD);
-  Renderer.drawText(t('aiFeatures'), 200, y + 22, { font: 'bold 12px system-ui', align: 'center' });
+  Renderer.roundRect(20, y, 360, 80, 16, COLORS.BG_CARD);
+  Renderer.drawText(t('aiFeatures'), 200, y + 18, { font: 'bold 12px system-ui', align: 'center' });
 
   [t('aiFeature1'), t('aiFeature2'), t('aiFeature3')].forEach((text, i) => {
-    Renderer.drawText(text, 200, y + 43 + i * 16, { font: '11px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center' });
+    Renderer.drawText(text, 200, y + 38 + i * 15, { font: '11px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center' });
   });
-  y += 105;
+  y += 90;
 
   game.scrollMaxY = Math.max(0, y - 700);
 }

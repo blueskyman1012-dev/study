@@ -2,6 +2,7 @@
 import { Renderer } from '../canvas/Renderer.js';
 import { SCREENS, COLORS } from '../utils/constants.js';
 import { geminiService } from '../services/GeminiService.js';
+import { problemGeneratorService } from '../services/ProblemGeneratorService.js';
 import { safeGetItem } from '../utils/storage.js';
 import { SoundService } from '../services/SoundService.js';
 import { apiService } from '../services/ApiService.js';
@@ -26,9 +27,9 @@ import { renderMainScreen } from './screens/MainScreen.js';
 import { renderBattleScreen } from './screens/BattleScreen.js';
 import { renderResultScreen } from './screens/ResultScreen.js';
 import { renderShopScreen, renderShopFixedHeader } from './screens/ShopScreen.js';
-import { renderSettingsScreen } from './screens/SettingsScreen.js';
+import { renderSettingsScreen, renderSettingsFixedHeader } from './screens/SettingsScreen.js';
 import { renderRegisterScreen } from './screens/RegisterScreen.js';
-import { renderStatsScreen } from './screens/StatsScreen.js';
+import { renderStatsScreen, renderStatsFixedHeader } from './screens/StatsScreen.js';
 import { renderDungeonSelectScreen } from './screens/DungeonSelectScreen.js';
 import { renderAchievementScreen } from './screens/AchievementScreen.js';
 
@@ -210,22 +211,14 @@ export class Game {
       case SCREENS.BATTLE: renderBattleScreen(this); break;
       case SCREENS.RESULT: renderResultScreen(this); break;
       case SCREENS.SETTINGS:
-        this._renderScrollableScreen(() => renderSettingsScreen(this), () => {
-          Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
-          Renderer.drawText(t('settingsTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
-          Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
-        });
+        this._renderScrollableScreen(() => renderSettingsScreen(this), () => renderSettingsFixedHeader(this));
         break;
       case SCREENS.DUNGEON_SELECT: renderDungeonSelectScreen(this); break;
       case SCREENS.SHOP:
         this._renderScrollableScreen(() => renderShopScreen(this), () => renderShopFixedHeader(this));
         break;
       case SCREENS.STATS:
-        this._renderScrollableScreen(() => renderStatsScreen(this), () => {
-          Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
-          Renderer.drawText(t('statsTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
-          Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
-        });
+        this._renderScrollableScreen(() => renderStatsScreen(this), () => renderStatsFixedHeader(this));
         break;
       case SCREENS.ACHIEVEMENT:
         this._renderScrollableScreen(() => renderAchievementScreen(this), () => {
@@ -312,6 +305,16 @@ export class Game {
     this.currentSubject = subject;
     await this.monsterManager.loadMonstersBySubject(subject);
 
+    // 문제 30개 미만이면 AI로 자동 채우기
+    const MIN_PROBLEMS = 30;
+    if (this.monsterManager.monsters.length < MIN_PROBLEMS) {
+      const hasAI = problemGeneratorService.hasApiKey() || geminiService.hasApiKey();
+      if (hasAI) {
+        await this._autoFillProblems(subject, MIN_PROBLEMS - this.monsterManager.monsters.length);
+        await this.monsterManager.loadMonstersBySubject(subject);
+      }
+    }
+
     if (this.monsterManager.monsters.length === 0) {
       await this.showModal(t('noProblems'));
       return;
@@ -339,6 +342,7 @@ export class Game {
 
     this.stage = 1;
     this.combo = 0;
+    this.finalBossWrongLastTurn = false;
 
     this.playerManager.resetHp();
     await this.nextMonster();
@@ -373,10 +377,11 @@ export class Game {
   async _reviveClearedMonsters() {
     try {
       const cleared = await this.db.getByIndex('monsters', 'status', 'cleared');
-      for (const m of cleared) {
+      if (cleared.length === 0) return;
+      await Promise.all(cleared.map(m => {
         m.status = 'alive';
-        await this.db.put('monsters', m);
-      }
+        return this.db.put('monsters', m);
+      }));
     } catch (err) {
       console.error('몬스터 부활 오류:', err);
     }
@@ -414,6 +419,78 @@ export class Game {
   showModal(message) { return this.dialogManager.showModal(message); }
   showConfirm(message) { return this.dialogManager.showConfirm(message); }
   showPrompt(message, defaultValue) { return this.dialogManager.showPrompt(message, defaultValue); }
+
+  // 문제 자동 채우기 (30개 미만 시 AI 생성)
+  async _autoFillProblems(subject, needed) {
+    const topics = problemGeneratorService.getTopics(subject);
+    const topicKeys = Object.keys(topics);
+    let remaining = needed;
+    let totalAdded = 0;
+
+    this.isGenerating = true;
+    this.generatingMessage = t('autoFillGenerating') || '문제 자동 생성 중...';
+    this.generatingSubMessage = t('autoFillDesc', remaining) || `${remaining}개 문제를 만들고 있습니다`;
+    this._needsRender = true;
+
+    try {
+      while (remaining > 0) {
+        const batchSize = Math.min(remaining, 5);
+        const randomTopic = topicKeys[Math.floor(Math.random() * topicKeys.length)];
+        const difficulty = Math.random() < 0.5 ? 1 : 2;
+
+        try {
+          let problems = null;
+          if (problemGeneratorService.hasApiKey()) {
+            problems = await problemGeneratorService.generateProblems(randomTopic, difficulty, batchSize, subject);
+          } else if (geminiService.hasApiKey()) {
+            const topicName = topics[randomTopic].name;
+            const result = await geminiService.generateNewProblems(subject, topicName, batchSize);
+            problems = result?.problems;
+          }
+
+          if (problems && problems.length > 0) {
+            for (const p of problems) {
+              if (!p.question || !p.answer) continue;
+              const monster = {
+                subject,
+                question: p.question,
+                answer: p.answer,
+                answers: p.answers || [p.answer],
+                choices: p.choices || [],
+                correctIndex: p.correctIndex || 0,
+                explanation: p.explanation || '',
+                topic: p.topic || topics[randomTopic].name,
+                hp: 80 + (p.difficulty || difficulty) * 20,
+                maxHp: 80 + (p.difficulty || difficulty) * 20,
+                difficulty: p.difficulty || difficulty,
+                isGenerated: true,
+                createdAt: Date.now(),
+                status: 'alive'
+              };
+              await this.db.add('monsters', monster);
+              totalAdded++;
+            }
+            remaining -= problems.length;
+          } else {
+            break;
+          }
+        } catch (err) {
+          console.error('자동 채우기 배치 오류:', err);
+          break;
+        }
+
+        this.generatingSubMessage = t('autoFillProgress', totalAdded, needed) || `${totalAdded}/${needed}개 생성 완료`;
+        this._needsRender = true;
+      }
+
+      if (totalAdded > 0) {
+        console.log(`✅ 자동 채우기 완료: ${totalAdded}개 문제 생성`);
+      }
+    } finally {
+      this.isGenerating = false;
+      this._needsRender = true;
+    }
+  }
 
   async save() {
     await this.playerManager.save();

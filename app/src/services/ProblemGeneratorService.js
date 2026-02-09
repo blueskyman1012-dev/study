@@ -53,6 +53,25 @@ export class ProblemGeneratorService {
     const topicInfo = MATH_TOPICS[topic] || MATH_TOPICS.linear;
     const difficultyText = ['쉬움', '보통', '어려움'][difficulty - 1] || '보통';
 
+    const isInequality = topic === 'inequality';
+
+    const answerRule = isInequality
+      ? `- 정답은 반드시 부등식 표현 (예: "x > 4", "x ≤ -3", "x < 2")
+- 선택지도 부등식 표현으로 (부등호 방향/등호 유무를 바꿔서 오답 생성)
+- 예: 정답 "x > 4" → 오답 "x < 4", "x ≥ 4", "x ≤ 4"
+- 절대 경계값 숫자만 정답으로 쓰지 마세요 (잘못된 예: "4")`
+      : `- 정답은 반드시 숫자 (예: "5", "-3", "2, -3")
+- 이차방정식은 두 근을 쉼표로 구분 (예: "2, -3")
+- 오답은 정답과 비슷한 숫자로 (예: 정답 5 → 오답 3, 7, -5)`;
+
+    const answerExample = isInequality
+      ? `"answer": "x > 4",
+      "answers": ["x > 4"],
+      "choices": ["x > 4", "x < 4", "x ≥ 4", "x ≤ 4"],`
+      : `"answer": "5",
+      "answers": ["5"],
+      "choices": ["5", "3", "7", "-5"],`;
+
     return `당신은 한국 고등학교 수학 선생님입니다.
 
 ## 작업
@@ -61,21 +80,17 @@ ${topicInfo.name} 문제를 ${count}개 만드세요.
 
 ## 조건
 - 난이도: ${difficultyText}
-- 정답은 반드시 숫자 (예: "5", "-3", "2, -3")
-- 이차방정식은 두 근을 쉼표로 구분 (예: "2, -3")
+${answerRule}
 - 학생이 자주 하는 실수를 반영한 오답 3개 포함
-- 오답은 정답과 비슷한 숫자로 (예: 정답 5 → 오답 3, 7, -5)
 
 ## JSON 출력 (반드시 이 형식만)
 {
   "problems": [
     {
       "question": "문제 내용",
-      "answer": "5",
-      "answers": ["5"],
-      "choices": ["5", "3", "7", "-5"],
+      ${answerExample}
       "correctIndex": 0,
-      "explanation": "풀이: 2x + 3 = 13, 2x = 10, x = 5",
+      "explanation": "풀이: 단계별 풀이 과정",
       "difficulty": ${difficulty},
       "topic": "${topicInfo.name}"
     }
@@ -84,7 +99,6 @@ ${topicInfo.name} 문제를 ${count}개 만드세요.
 
 ## 필수
 - choices[0]은 반드시 정답
-- 모든 choices는 숫자만
 - explanation은 단계별 풀이`;
   }
 
@@ -129,20 +143,29 @@ ${topicInfo.name} (${topicInfo.level}등학교) 문제를 ${count}개 만드세�
 
   // 유사 문제 생성 Prompt
   buildSimilarPrompt(originalProblem) {
+    const topic = originalProblem.topic || '수학';
+    const isInequality = topic === '부등식' || (originalProblem.answer && /[<>≤≥]/.test(originalProblem.answer));
+
+    const answerRule = isInequality
+      ? `- 부등식 문제: 정답은 반드시 부등식 표현 (예: "x > 4", "x ≤ -3")
+- 선택지도 부등식 표현 (부등호 방향/등호 바꿔서 오답 생성)
+- 절대 경계값 숫자만 정답으로 쓰지 마세요`
+      : `- 정답은 숫자만
+- 오답 3개 포함 (정답과 비슷한 숫자)`;
+
     return `당신은 한국 고등학교 수학 선생님입니다.
 
 ## 원본 문제
 문제: ${originalProblem.question}
 정답: ${originalProblem.answer}
-주제: ${originalProblem.topic || '수학'}
+주제: ${topic}
 
 ## 작업
 위 문제와 유사하지만 숫자가 다른 문제 2개를 만드세요.
 
 ## 조건
 - 같은 유형, 다른 숫자
-- 정답은 숫자만
-- 오답 3개 포함 (정답과 비슷한 숫자)
+${answerRule}
 - 단계별 풀이 포함
 
 ## JSON 출력
@@ -156,7 +179,7 @@ ${topicInfo.name} (${topicInfo.level}등학교) 문제를 ${count}개 만드세�
       "correctIndex": 0,
       "explanation": "풀이",
       "difficulty": ${originalProblem.difficulty || 2},
-      "topic": "${originalProblem.topic || '수학'}"
+      "topic": "${topic}"
     }
   ]
 }`;

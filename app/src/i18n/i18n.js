@@ -173,6 +173,9 @@ const translations = {
     'result_timeout': '시간초과',
     'stats_topicAnalysis': '유형별 오답 분석',
     'stats_diffWrong': '난이도별 오답',
+    'stats_tabOverview': '종합',
+    'stats_tabSubject': '과목',
+    'stats_tabAnalysis': '분석',
 
     // 던전 선택
     'dungeonSelect': '⚔️ 던전 선택',
@@ -292,6 +295,9 @@ const translations = {
     'generating': '🤖 AI 문제 생성 중...',
     'generatingDesc': '{0}개 문제를 만들고 있어요',
     'pleaseWait': '잠시만 기다려주세요...',
+    'autoFillGenerating': '🤖 문제 자동 생성 중...',
+    'autoFillDesc': '{0}개 문제를 채우고 있습니다',
+    'autoFillProgress': '{0}/{1}개 생성 완료',
 
     // BattleManager 메시지
     'monsterHpRecover': '몬스터 체력 회복!',
@@ -683,6 +689,9 @@ const translations = {
     'result_timeout': 'Timeout',
     'stats_topicAnalysis': 'Wrong by Topic',
     'stats_diffWrong': 'Wrong by Difficulty',
+    'stats_tabOverview': 'Overview',
+    'stats_tabSubject': 'Subject',
+    'stats_tabAnalysis': 'Analysis',
 
     'dungeonSelect': '⚔️ Select Dungeon',
     'selectDungeon': 'Choose a dungeon to challenge',
@@ -794,6 +803,9 @@ const translations = {
     'generating': '🤖 AI Generating...',
     'generatingDesc': 'Creating {0} problems',
     'pleaseWait': 'Please wait...',
+    'autoFillGenerating': '🤖 Auto-generating problems...',
+    'autoFillDesc': 'Filling {0} more problems',
+    'autoFillProgress': '{0}/{1} generated',
 
     'monsterHpRecover': 'Monster HP recovered!',
     'reviveUsed': '🪶 Revive used! HP 50% restored!\n(Remaining: {0})',
@@ -1178,6 +1190,9 @@ const translations = {
     'result_timeout': 'タイムアウト',
     'stats_topicAnalysis': '類型別誤答分析',
     'stats_diffWrong': '難易度別誤答',
+    'stats_tabOverview': '総合',
+    'stats_tabSubject': '科目',
+    'stats_tabAnalysis': '分析',
 
     'dungeonSelect': '⚔️ ダンジョン選択',
     'selectDungeon': '挑戦するダンジョンを選んでください',
@@ -1671,6 +1686,9 @@ const translations = {
     'result_timeout': '超时',
     'stats_topicAnalysis': '按类型错题分析',
     'stats_diffWrong': '按难度错题',
+    'stats_tabOverview': '综合',
+    'stats_tabSubject': '科目',
+    'stats_tabAnalysis': '分析',
 
     'dungeonSelect': '⚔️ 选择地牢',
     'selectDungeon': '选择要挑战的地牢',

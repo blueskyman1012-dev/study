@@ -106,34 +106,53 @@ export function renderShopScreen(game) {
   }
 }
 
+// 원형 프로그레스 링 그리기
+function drawProgressRing(ctx, cx, cy, radius, lineWidth, ratio, color, bgColor) {
+  const startAngle = -Math.PI / 2;
+  // 배경 링
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = bgColor;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // 진행 링
+  if (ratio > 0) {
+    const endAngle = startAngle + Math.PI * 2 * ratio;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+
 // ─── 강화 탭 ───
 function renderUpgradeTab(game, player, shopManager, startY, W, H) {
   const upgrades = Object.entries(UPGRADES);
-  const cardH = 110;
+  const cardH = 100;
   let y = startY;
+  const ctx = Renderer.ctx;
+  const pm = game.playerManager;
 
   // === 스탯 요약 패널 ===
   const panelH = 60;
   const panelX = 10, panelW = W - 20;
 
-  // 그래디언트 배경
   Renderer.drawGradientCard(panelX, y, panelW, panelH, 10, 'rgba(99,102,241,0.12)', 'rgba(99,102,241,0.04)');
-  // 인디고 테두리
-  Renderer.ctx.save();
-  Renderer.ctx.strokeStyle = 'rgba(99,102,241,0.3)';
-  Renderer.ctx.lineWidth = 1;
-  Renderer.ctx.beginPath();
-  Renderer.ctx.roundRect(panelX, y, panelW, panelH, 10);
-  Renderer.ctx.stroke();
-  Renderer.ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = 'rgba(99,102,241,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(panelX, y, panelW, panelH, 10);
+  ctx.stroke();
+  ctx.restore();
 
-  // 타이틀
   Renderer.drawText(t('shopStatSummary'), panelX + 12, y + 8, {
     font: 'bold 11px system-ui', color: COLORS.ACCENT_LIGHT
   });
 
-  // 4컬럼 스탯 표시
-  const pm = game.playerManager;
   const stats = [
     { label: t('shopHp'), value: pm.getTotalMaxHp(), color: '#22c55e' },
     { label: t('shopAtk'), value: pm.getTotalDamage(), color: '#ef4444' },
@@ -153,110 +172,138 @@ function renderUpgradeTab(game, player, shopManager, startY, W, H) {
 
   y += panelH + 10;
 
+  // 업그레이드별 색상 테마
+  const upgradeColors = {
+    hp:        { main: '#22c55e', glow: 'rgba(34,197,94,0.25)',  bg: 'rgba(34,197,94,0.08)' },
+    damage:    { main: '#ef4444', glow: 'rgba(239,68,68,0.25)',  bg: 'rgba(239,68,68,0.08)' },
+    time:      { main: '#3b82f6', glow: 'rgba(59,130,246,0.25)', bg: 'rgba(59,130,246,0.08)' },
+    goldBonus: { main: '#fbbf24', glow: 'rgba(251,191,36,0.25)', bg: 'rgba(251,191,36,0.08)' },
+  };
+
   // === 업그레이드 카드 ===
   upgrades.forEach(([key, upgrade]) => {
     const currentLevel = player.permanentUpgrades?.[key] || 0;
     const isMaxed = currentLevel >= upgrade.maxLevel;
     const price = shopManager.getUpgradePrice(key);
     const canBuy = player.gold >= price && !isMaxed;
+    const theme = upgradeColors[key] || upgradeColors.hp;
+    const ratio = currentLevel / upgrade.maxLevel;
+    const pct = Math.round(ratio * 100);
 
     const innerH = cardH - 6;
 
-    // 그래디언트 카드 배경
+    // ── 카드 배경 ──
     Renderer.drawGradientCard(10, y, W - 20, innerH, 12, '#1e1e2e', '#16161f');
 
-    // 왼쪽 악센트 테두리
-    if (isMaxed) {
-      Renderer.roundRect(10, y + 6, 3, innerH - 12, 1.5, COLORS.SUCCESS);
-    } else if (canBuy) {
-      Renderer.roundRect(10, y + 6, 3, innerH - 12, 1.5, COLORS.ACCENT);
-    }
+    // 왼쪽 컬러 악센트 바
+    const accentColor = isMaxed ? '#22c55e' : (canBuy ? theme.main : 'rgba(255,255,255,0.1)');
+    Renderer.roundRect(10, y + 6, 3, innerH - 12, 1.5, accentColor);
 
-    // 구매 불가 시 어둡게 처리 (오버레이)
+    // 구매 불가 시 어둡게
     if (!canBuy && !isMaxed) {
-      Renderer.roundRect(10, y, W - 20, innerH, 12, 'rgba(0,0,0,0.35)');
+      Renderer.roundRect(10, y, W - 20, innerH, 12, 'rgba(0,0,0,0.3)');
     }
 
-    // 왼쪽 아이콘 원형 영역
-    const iconCX = 42;
-    const iconCY = y + innerH / 2;
-    Renderer.roundRect(iconCX - 18, iconCY - 18, 36, 36, 18, isMaxed ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.15)');
-    Renderer.drawText(upgrade.icon, iconCX, iconCY - 10, { font: '22px system-ui', align: 'center' });
+    // ── 원형 프로그레스 링 + 아이콘 ──
+    const ringCX = 48;
+    const ringCY = y + innerH / 2;
+    const ringR = 26;
+    const ringLine = 5;
 
-    // 이름 + 레벨 뱃지
-    const nameY = y + 14;
-    Renderer.drawText(t(upgrade.nameKey), 72, nameY, {
-      font: 'bold 15px system-ui', color: COLORS.TEXT_PRIMARY
+    // 링 뒤 글로우
+    ctx.save();
+    ctx.shadowColor = isMaxed ? 'rgba(34,197,94,0.5)' : theme.glow;
+    ctx.shadowBlur = 10;
+    Renderer.drawCircle(ringCX, ringCY, ringR - 4, 'rgba(0,0,0,0.01)');
+    ctx.restore();
+
+    // 내부 원 배경
+    Renderer.drawCircle(ringCX, ringCY, ringR - 4, isMaxed ? 'rgba(34,197,94,0.1)' : theme.bg);
+
+    // 프로그레스 링
+    ctx.save();
+    const ringColor = isMaxed ? '#22c55e' : theme.main;
+    drawProgressRing(ctx, ringCX, ringCY, ringR, ringLine, ratio, ringColor, 'rgba(255,255,255,0.08)');
+    ctx.restore();
+
+    // 아이콘 (링 중앙)
+    Renderer.drawText(upgrade.icon, ringCX, ringCY - 12, { font: '20px system-ui', align: 'center' });
+
+    // 퍼센트/MAX (링 중앙 하단)
+    if (isMaxed) {
+      Renderer.drawText('MAX', ringCX, ringCY + 8, {
+        font: 'bold 10px system-ui', color: '#22c55e', align: 'center'
+      });
+    } else {
+      Renderer.drawText(`${pct}%`, ringCX, ringCY + 8, {
+        font: 'bold 10px system-ui', color: theme.main, align: 'center'
+      });
+    }
+
+    // ── 우측 정보 영역 ──
+    const infoX = 84;
+
+    // 이름
+    const nameY = y + 12;
+    Renderer.drawText(t(upgrade.nameKey), infoX, nameY, {
+      font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY
     });
 
-    // 레벨 뱃지
-    const lvText = isMaxed ? t('shopMaxReached') : `Lv.${currentLevel}`;
-    const lvColor = isMaxed ? COLORS.SUCCESS : COLORS.ACCENT_LIGHT;
-    const lvBgColor = isMaxed ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.2)';
-    const nameWidth = Renderer.ctx.measureText(t(upgrade.nameKey)).width;
-    Renderer.roundRect(72 + nameWidth + 6, nameY - 2, 48, 18, 9, lvBgColor);
-    Renderer.drawText(lvText, 72 + nameWidth + 30, nameY + 1, {
+    // 레벨 뱃지 (이름 옆)
+    const lvText = isMaxed ? t('shopMaxReached') : `Lv.${currentLevel}/${upgrade.maxLevel}`;
+    const lvColor = isMaxed ? '#22c55e' : theme.main;
+    const lvBgColor = isMaxed ? 'rgba(34,197,94,0.15)' : theme.glow;
+    const nameWidth = ctx.measureText(t(upgrade.nameKey)).width;
+    const badgeW = ctx.measureText(lvText).width + 12;
+    Renderer.roundRect(infoX + nameWidth + 6, nameY - 3, badgeW, 18, 9, lvBgColor);
+    Renderer.drawText(lvText, infoX + nameWidth + 6 + badgeW / 2, nameY, {
       font: 'bold 10px system-ui', color: lvColor, align: 'center'
     });
 
-    // 프로그레스 바 (160px 넓이) + 레벨 마커 점
-    const barX = 72, barW = 160, barH = 8, barY = nameY + 22;
-    const fillRatio = currentLevel / upgrade.maxLevel;
-    Renderer.roundRect(barX, barY, barW, barH, 4, COLORS.BG_SECONDARY);
-    if (fillRatio > 0) {
-      Renderer.roundRect(barX, barY, Math.round(barW * fillRatio), barH, 4, isMaxed ? COLORS.SUCCESS : COLORS.ACCENT);
-    }
-    // 레벨 마커 점
-    for (let i = 1; i < upgrade.maxLevel; i++) {
-      const mx = barX + Math.round(barW * (i / upgrade.maxLevel));
-      Renderer.drawCircle(mx, barY + barH / 2, 1.5, i <= currentLevel ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.1)');
-    }
-    Renderer.drawText(`${currentLevel}/${upgrade.maxLevel}`, barX + barW + 8, barY - 2, {
-      font: '12px system-ui', color: isMaxed ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY
-    });
-
-    // 스탯 미리보기
+    // 스탯 미리보기 (2번째 줄)
     const preview = getUpgradePreview(game, key);
     if (preview) {
-      const previewY = barY + 16;
-      Renderer.drawText(`${preview.label}: `, 72, previewY, {
+      const prevY = nameY + 20;
+      Renderer.drawText(`${preview.label}: `, infoX, prevY, {
         font: '12px system-ui', color: COLORS.TEXT_SECONDARY
       });
-      const labelW = Renderer.ctx.measureText(`${preview.label}: `).width;
-      Renderer.drawText(String(preview.current), 72 + labelW, previewY, {
+      const labelW = ctx.measureText(`${preview.label}: `).width;
+      Renderer.drawText(String(preview.current), infoX + labelW, prevY, {
         font: 'bold 12px system-ui', color: '#fff'
       });
-      const curW = Renderer.ctx.measureText(String(preview.current)).width;
-      Renderer.drawText(' → ', 72 + labelW + curW, previewY, {
+      const curW = ctx.measureText(String(preview.current)).width;
+      Renderer.drawText(' → ', infoX + labelW + curW, prevY, {
         font: '12px system-ui', color: COLORS.TEXT_SECONDARY
       });
-      const arrowW = Renderer.ctx.measureText(' → ').width;
-      Renderer.drawText(String(preview.next), 72 + labelW + curW + arrowW, previewY, {
-        font: 'bold 12px system-ui', color: COLORS.SUCCESS
+      const arrowW = ctx.measureText(' → ').width;
+      Renderer.drawText(String(preview.next), infoX + labelW + curW + arrowW, prevY, {
+        font: 'bold 12px system-ui', color: '#4ade80'
       });
     }
 
-    // 설명
-    const descY = y + innerH - 18;
-    Renderer.drawText(t(upgrade.descKey), 72, descY, { font: '11px system-ui', color: COLORS.TEXT_SECONDARY });
+    // 설명 (3번째 줄)
+    const descY = y + innerH - 16;
+    Renderer.drawText(t(upgrade.descKey), infoX, descY, {
+      font: '11px system-ui', color: COLORS.TEXT_SECONDARY
+    });
 
-    // 버튼
-    const btnW = 88, btnH = 30;
+    // ── 구매 버튼 (우측) ──
+    const btnW = 80, btnH = 32;
     const btnX = W - 10 - btnW - 8;
-    const btnY = y + Math.round((innerH - btnH) / 2);
+    const btnY2 = y + Math.round((innerH - btnH) / 2);
 
     if (isMaxed) {
-      // MAX 버튼: 초록 그래디언트
-      Renderer.drawGradientCard(btnX, btnY, btnW, btnH, 8, '#22c55e', '#16a34a');
-      Renderer.drawText(t('shopMaxReached'), btnX + btnW / 2, btnY + 8, { font: 'bold 13px system-ui', color: '#000', align: 'center' });
+      Renderer.drawGradientCard(btnX, btnY2, btnW, btnH, 8, '#22c55e', '#16a34a');
+      Renderer.drawText(t('shopMaxReached'), btnX + btnW / 2, btnY2 + 9, {
+        font: 'bold 13px system-ui', color: '#000', align: 'center'
+      });
     } else {
       const btnColor = canBuy ? COLORS.WARNING : COLORS.BG_SECONDARY;
-      Renderer.roundRect(btnX, btnY, btnW, btnH, 8, btnColor);
-      Renderer.drawText(`${price}G`, btnX + btnW / 2, btnY + 8, {
+      Renderer.roundRect(btnX, btnY2, btnW, btnH, 8, btnColor);
+      Renderer.drawText(`${price}G`, btnX + btnW / 2, btnY2 + 9, {
         font: 'bold 13px system-ui', color: canBuy ? '#000' : COLORS.TEXT_SECONDARY, align: 'center'
       });
-      // 구매 가능이든 불가든 클릭 영역 등록
-      game.registerClickArea(`upgrade_${key}`, btnX, btnY, btnW, btnH, () => shopManager.buyUpgrade(key));
+      game.registerClickArea(`upgrade_${key}`, btnX, btnY2, btnW, btnH, () => shopManager.buyUpgrade(key));
     }
 
     y += cardH;
