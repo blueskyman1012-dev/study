@@ -260,6 +260,30 @@ export class ApiService {
     return result.keys;
   }
 
+  // --- 로컬 → 서버 업로드 ---
+  async uploadMonsters(db) {
+    const alive = await db.getByIndex('monsters', 'status', 'alive') || [];
+    const cleared = await db.getByIndex('monsters', 'status', 'cleared') || [];
+    const allMonsters = [...alive, ...cleared];
+
+    let uploaded = 0;
+    for (const monster of allMonsters) {
+      if (monster.serverId) continue; // 이미 서버에 있음
+
+      const result = await this.postMonster(monster);
+      if (result?.id) {
+        monster.serverId = result.id;
+        await db.put('monsters', monster);
+        uploaded++;
+      }
+    }
+
+    if (uploaded > 0) {
+      console.log(`📤 몬스터 ${uploaded}건 서버 업로드 완료`);
+    }
+    return uploaded;
+  }
+
   // --- 서버 데이터 → 로컬 동기화 ---
   async downloadPlayerData(db) {
     const result = await this.getPlayer();

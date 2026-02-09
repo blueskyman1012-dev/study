@@ -11,12 +11,14 @@ export class RegisterManager {
     this.pendingImage = null;
     this.previewImg = null;
     this.previewImageLoaded = false;
+    this._previewImageLoading = false;
   }
 
   startRegister() {
     this.pendingImage = null;
     this.previewImg = null;
     this.previewImageLoaded = false;
+    this._previewImageLoading = false;
     this.game.changeScreen(SCREENS.MAIN);
   }
 
@@ -37,6 +39,7 @@ export class RegisterManager {
     let explanation = '', aiAnalysis = null, topic = '', difficulty = 2;
     let keywords = [], questionType = t('multipleChoice'), formula = '';
 
+    try {
     if (imageAnalysisService.hasApiKey()) {
       try {
         game.isGenerating = true;
@@ -84,14 +87,14 @@ export class RegisterManager {
             } else { throw new Error(t('noAnalysisResult')); }
           } catch (geminiErr) {
             game.isGenerating = false;
-            await game.showModal(t('aiFailed', err.message));
+            await game.showModal(t('aiFailed', this._safeErrorMsg(err)));
             question = await game.showPrompt(t('inputQuestion')) || '';
             if (!question) return;
             answer = await game.showPrompt(t('inputAnswer')) || '';
           }
         } else {
           game.isGenerating = false;
-          await game.showModal(t('aiFailed', err.message));
+          await game.showModal(t('aiFailed', this._safeErrorMsg(err)));
           question = await game.showPrompt(t('inputQuestion')) || '';
           if (!question) return;
           answer = await game.showPrompt(t('inputAnswer')) || '';
@@ -117,7 +120,7 @@ export class RegisterManager {
         } else { throw new Error(t('noAnalysisResult')); }
       } catch (err) {
         game.isGenerating = false;
-        await game.showModal(t('aiFailed', err.message));
+        await game.showModal(t('aiFailed', this._safeErrorMsg(err)));
         question = await game.showPrompt(t('inputQuestion')) || '';
         if (!question) return;
         answer = await game.showPrompt(t('inputAnswer')) || '';
@@ -126,6 +129,9 @@ export class RegisterManager {
       question = await game.showPrompt(t('inputQuestion')) || '';
       if (!question) return;
       answer = await game.showPrompt(t('inputAnswer')) || '';
+    }
+    } finally {
+      game.isGenerating = false;
     }
 
     if (!answer && choices && choices.length > 0) {
@@ -142,6 +148,16 @@ export class RegisterManager {
       correctIndex = 0;
     }
 
+    // 입력값 검증 (XSS/인젝션 방지)
+    question = this._sanitize(question, 1000);
+    answer = this._sanitize(answer, 200);
+    explanation = this._sanitize(explanation, 1000);
+    topic = this._sanitize(topic, 100);
+    formula = this._sanitize(formula, 500);
+    answers = answers.map(a => this._sanitize(a, 200));
+    choices = choices.map(c => this._sanitize(c, 200));
+    keywords = keywords.map(k => this._sanitize(k, 50));
+
     const monster = {
       subject: subjectId, imageData, question, answer,
       answers: answers.length > 0 ? answers : [answer],
@@ -155,7 +171,9 @@ export class RegisterManager {
 
     await game.db.add('monsters', monster);
     if (apiService.isLoggedIn()) {
-      apiService.postMonster(monster).catch(() => {});
+      apiService.postMonster(monster).catch(err => {
+        console.warn('몬스터 서버 업로드 실패:', err.message || err);
+      });
     }
     await game.monsterManager.loadMonsters();
     game.achievementManager.onMonsterRegistered(subjectId);
@@ -163,9 +181,26 @@ export class RegisterManager {
     this.pendingImage = null;
     this.previewImg = null;
     this.previewImageLoaded = false;
+    this._previewImageLoading = false;
 
     await game.showModal(t('monsterRegistered'));
     game.changeScreen(SCREENS.MAIN);
+  }
+
+  // 에러 메시지에서 시스템 정보 제거
+  _safeErrorMsg(err) {
+    const msg = err?.message || '';
+    // URL, 파일 경로, 스택 트레이스 제거
+    return msg.replace(/https?:\/\/[^\s]+/g, '[URL]')
+      .replace(/[A-Z]:\\[^\s]+/gi, '[path]')
+      .replace(/\/[^\s]*\/[^\s]+/g, '[path]')
+      .substring(0, 100);
+  }
+
+  // 입력값 검증: HTML 태그 제거 + 길이 제한
+  _sanitize(text, maxLen = 500) {
+    if (typeof text !== 'string') return '';
+    return text.replace(/<[^>]*>/g, '').trim().substring(0, maxLen);
   }
 
   _parseDifficulty(diffStr) {

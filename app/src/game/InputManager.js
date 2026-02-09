@@ -73,6 +73,7 @@ export class InputManager {
     for (const area of this.clickAreas) {
       if (x >= area.x && x <= area.x + area.width &&
           adjustedY >= area.y && adjustedY <= area.y + area.height) {
+        this.game._needsRender = true;
         if (area.id === 'toggleSfx' || area.id === 'toggleBgm') {
           area.callback(x, adjustedY);
         } else {
@@ -117,6 +118,7 @@ export class InputManager {
 
     if (this._isTouchScrolling) {
       this.scrollY = Math.max(0, Math.min(this.scrollMaxY, this.scrollY + delta));
+      this.game._needsRender = true;
     }
   }
 

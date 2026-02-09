@@ -20,6 +20,20 @@ export class PlayerManager {
     }
 
     this.player = playerData;
+
+    // cosmetics 필드 마이그레이션
+    if (!this.player.cosmetics) {
+      this.player.cosmetics = {
+        purchasedThemes: ['default'],
+        particleStyle: 'default',
+        purchasedParticles: ['default'],
+        damageTextStyle: 'default',
+        purchasedDamageText: ['default'],
+        correctFlash: 'default',
+        purchasedFlash: ['default']
+      };
+    }
+
     this.player.maxHp = this.getTotalMaxHp();
     this.player.currentHp = this.player.maxHp;
     await this.db.put('player', this.player);
@@ -36,6 +50,15 @@ export class PlayerManager {
       permanentUpgrades: { hp: 0, time: 0, goldBonus: 0, damage: 0 },
       inventory: { reviveTicket: 0, hintTicket: 0, timeBoost: 0, doubleGold: 0 },
       stats: { totalRuns: 0, totalKills: 0, bestCombo: 0, totalClears: 0 },
+      cosmetics: {
+        purchasedThemes: ['default'],
+        particleStyle: 'default',
+        purchasedParticles: ['default'],
+        damageTextStyle: 'default',
+        purchasedDamageText: ['default'],
+        correctFlash: 'default',
+        purchasedFlash: ['default']
+      },
       achievements: {},
       dailyMissions: {},
       totalGoldEarned: 0,

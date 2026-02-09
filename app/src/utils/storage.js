@@ -23,3 +23,30 @@ export function safeRemoveItem(key) {
     // ignore
   }
 }
+
+// sessionStorage 래퍼 (민감 데이터용: 토큰, API 키)
+// 탭 종료 시 자동 삭제되어 localStorage보다 안전
+
+export function secureGetItem(key, fallback = null) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return fallback;
+  }
+}
+
+export function secureSetItem(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
+export function secureRemoveItem(key) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}

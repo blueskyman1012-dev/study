@@ -10,10 +10,11 @@ export async function getMonsters(env, user) {
 export async function addMonster(request, env, user) {
   const data = await request.json();
   const result = await env.DB.prepare(
-    'INSERT INTO monsters (user_id, subject, question, answer, wrong_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO monsters (user_id, subject, question, answer, wrong_answer, explanation, difficulty, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   ).bind(
     user.userId, data.subject, data.question, data.answer,
-    data.wrong_answer, data.explanation, data.difficulty ?? 1
+    data.wrong_answer, data.explanation, data.difficulty ?? 1,
+    data.data ? JSON.stringify(data.data) : null
   ).run();
   return json({ success: true, id: result.meta.last_row_id }, 201);
 }

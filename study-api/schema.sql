@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS monsters (
   explanation TEXT,
   status TEXT DEFAULT 'alive',
   difficulty INTEGER DEFAULT 1,
+  data TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   defeated_at TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id)

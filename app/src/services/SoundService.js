@@ -16,8 +16,17 @@ class SoundServiceClass {
 
   // 초기화 (사용자 상호작용 후 호출 필요)
   init() {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // iOS: suspended 상태면 resume (사용자 상호작용 컨텍스트에서 호출됨)
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(() => {});
+      }
+    } catch (err) {
+      console.warn('AudioContext 초기화 실패:', err.message);
+      this.audioContext = null;
     }
     // 설정 로드
     this.sfxEnabled = safeGetItem('sfx_enabled') !== 'false';
@@ -100,9 +109,14 @@ class SoundServiceClass {
     const ctx = this.audioContext;
     if (!ctx) return;
 
-    // suspended 상태면 resume
+    // iOS: suspended 상태면 resume 후 재시도
     if (ctx.state === 'suspended') {
-      ctx.resume();
+      ctx.resume().then(() => {
+        if (this.bgmPlaying && this.bgmEnabled) {
+          this._playLobbyLoop();
+        }
+      }).catch(() => {});
+      return;
     }
 
     const vol = this.bgmVolume;
@@ -247,6 +261,12 @@ class SoundServiceClass {
   playTone(frequency, duration, type = 'sine', volumeMultiplier = 1) {
     if (!this.sfxEnabled || !this.audioContext) return;
 
+    // iOS: suspended 상태면 재생 불가
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
+      return;
+    }
+
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
 
@@ -362,7 +382,7 @@ class SoundServiceClass {
 
   // 노이즈 버스트 (폭발/임팩트용)
   _playNoiseBurst(duration, vol) {
-    if (!this.audioContext) return;
+    if (!this.audioContext || this.audioContext.state === 'suspended') return;
     const ctx = this.audioContext;
     const bufferSize = ctx.sampleRate * duration;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);

@@ -7,7 +7,7 @@ import { apiService } from './services/ApiService.js';
 import { geminiService } from './services/GeminiService.js';
 import { imageAnalysisService } from './services/ImageAnalysisService.js';
 import { t, applyToHTML } from './i18n/i18n.js';
-import { safeGetItem, safeSetItem, safeRemoveItem } from './utils/storage.js';
+import { safeGetItem, safeSetItem, safeRemoveItem, secureGetItem, secureSetItem, secureRemoveItem } from './utils/storage.js';
 import './style.css';
 
 const API_URL = 'https://study-api.blueskyman1012.workers.dev';
@@ -28,6 +28,8 @@ class App {
     this.sessionToken = null;
     this.currentUser = null;
     this.lastSyncTime = 0;
+    this._animFrameId = null;
+    this._eventsSetup = false;
   }
 
   async init() {
@@ -36,8 +38,11 @@ class App {
     // 로그아웃 버튼 (항상 등록)
     document.getElementById('logout-btn').addEventListener('click', () => this.logout());
 
+    // localStorage→sessionStorage 마이그레이션 (1회성)
+    this._migrateSensitiveKeys();
+
     // 기존 세션 확인
-    this.sessionToken = safeGetItem('session_token');
+    this.sessionToken = secureGetItem('session_token');
     if (this.sessionToken) {
       const valid = await this.verifySession();
       if (valid) {
@@ -45,12 +50,23 @@ class App {
         return;
       }
       // 토큰 만료 → 다시 로그인
-      safeRemoveItem('session_token');
+      secureRemoveItem('session_token');
       this.sessionToken = null;
     }
 
     // Google 로그인 화면 표시
     this.initGoogleLogin();
+  }
+
+  _migrateSensitiveKeys() {
+    const sensitiveKeys = ['session_token', 'gemini_api_key', 'smileprint_api_key'];
+    for (const key of sensitiveKeys) {
+      const val = safeGetItem(key);
+      if (val) {
+        secureSetItem(key, val);
+        safeRemoveItem(key);
+      }
+    }
   }
 
   initGoogleLogin() {
@@ -104,7 +120,7 @@ class App {
       if (data.success) {
         this.sessionToken = data.sessionToken;
         this.currentUser = data.user;
-        safeSetItem('session_token', data.sessionToken);
+        secureSetItem('session_token', data.sessionToken);
         safeSetItem('user_name', data.user.name);
         safeSetItem('user_picture', data.user.picture);
         apiService.setToken(data.sessionToken);
@@ -136,10 +152,15 @@ class App {
   }
 
   logout() {
+    // gameLoop 중지
+    if (this._animFrameId) {
+      cancelAnimationFrame(this._animFrameId);
+      this._animFrameId = null;
+    }
     this.sessionToken = null;
     this.currentUser = null;
     apiService.setToken(null);
-    safeRemoveItem('session_token');
+    secureRemoveItem('session_token');
     safeRemoveItem('user_name');
     safeRemoveItem('user_picture');
     document.getElementById('login-screen').style.display = 'flex';
@@ -184,6 +205,9 @@ class App {
     // 로그인 상태면 서버에서 데이터 다운로드
     if (apiService.isLoggedIn()) {
       try {
+        console.log('📤 로컬→서버 업로드 중...');
+        await apiService.uploadMonsters(this.db);
+
         console.log('📥 서버 데이터 동기화 중...');
         const [,,,keys] = await Promise.all([
           apiService.downloadPlayerData(this.db),
@@ -194,12 +218,12 @@ class App {
         if (keys) {
           if (keys.smileprint_api_key) {
             imageAnalysisService.apiKey = keys.smileprint_api_key;
-            safeSetItem('smileprint_api_key', keys.smileprint_api_key);
+            secureSetItem('smileprint_api_key', keys.smileprint_api_key);
             console.log('🔑 SmilePrint API 키 복원됨');
           }
           if (keys.gemini_api_key) {
             geminiService.apiKey = keys.gemini_api_key;
-            safeSetItem('gemini_api_key', keys.gemini_api_key);
+            secureSetItem('gemini_api_key', keys.gemini_api_key);
             console.log('🔑 Gemini API 키 복원됨');
           }
         }
@@ -216,12 +240,15 @@ class App {
     // 이벤트 리스너
     this.setupEvents();
 
-    // 버튼 레이아웃 캐싱 + resize 리스너
+    // 버튼 레이아웃 캐싱 (resize 리스너는 setupEvents 내에서 등록)
     this._logoutBtn = document.getElementById('logout-btn');
     this._updateButtonLayout();
-    window.addEventListener('resize', () => this._updateButtonLayout());
 
-    // 게임 루프 시작
+    // 이전 gameLoop가 있으면 중지 후 재시작
+    if (this._animFrameId) {
+      cancelAnimationFrame(this._animFrameId);
+      this._animFrameId = null;
+    }
     this.gameLoop();
 
     console.log('🎮 오답헌터 시작!');
@@ -390,8 +417,15 @@ class App {
   }
 
   setupEvents() {
-    // 리사이즈
-    window.addEventListener('resize', () => this.resizeCanvas());
+    // 이미 등록되었으면 중복 등록 방지
+    if (this._eventsSetup) return;
+    this._eventsSetup = true;
+
+    // 리사이즈 (버튼 레이아웃 업데이트도 통합)
+    window.addEventListener('resize', () => {
+      this.resizeCanvas();
+      this._updateButtonLayout();
+    });
 
     // 클릭 (터치 직후 발생하는 click은 무시)
     this.canvas.addEventListener('click', (e) => {
@@ -554,6 +588,12 @@ class App {
 
   gameLoop() {
     this.game.update();
+
+    if (!this.game._needsRender) {
+      this._animFrameId = requestAnimationFrame(() => this.gameLoop());
+      return;
+    }
+    this.game._needsRender = false;
     this.game.render();
 
     // 메인 화면에서만 오답등록 버튼 표시
@@ -583,7 +623,7 @@ class App {
       if (isMain) this._logoutBtn.style.opacity = Renderer.getUiOpacity();
     }
 
-    requestAnimationFrame(() => this.gameLoop());
+    this._animFrameId = requestAnimationFrame(() => this.gameLoop());
   }
 }
 

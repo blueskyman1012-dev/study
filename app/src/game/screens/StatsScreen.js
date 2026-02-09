@@ -423,8 +423,161 @@ export function renderStatsScreen(game) {
     });
   }
 
-  // ─── H. 하단 여백 ───
-  // 스크롤 최대값 설정 (전체 콘텐츠 높이 - 화면 높이)
-  const totalContentHeight = 1420;
+  // ─── H. 아이템 사용 통계 (y:1380, h:120) ───
+  Renderer.drawGradientCard(20, 1380, 360, 120, 14, '#1a1a28', '#151520');
+  Renderer.roundRect(20, 1380, 360, 120, 14, null, 'rgba(251,191,36,0.2)');
+  Renderer.drawText('🎒 ' + t('stats_itemUsage'), 40, 1398, {
+    font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
+  });
+
+  // 2줄 x 3열 레이아웃
+  const itemData = [
+    { icon: '⏭️', label: t('stats_skipTotal'), value: stats.totalSkips || 0, color: COLORS.TEXT_PRIMARY },
+    { icon: '💡', label: t('stats_hintTotal'), value: stats.totalHints || 0, color: '#fbbf24' },
+    { icon: '⏰', label: t('stats_timeBoostTotal'), value: stats.totalTimeBoosts || 0, color: '#38bdf8' },
+    { icon: '🪶', label: t('stats_reviveTotal'), value: stats.totalRevives || 0, color: COLORS.SUCCESS },
+    { icon: '⏱️', label: t('stats_timeoutTotal'), value: stats.totalTimeouts || 0, color: COLORS.DANGER }
+  ];
+
+  for (let i = 0; i < itemData.length; i++) {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const ix = 40 + col * 115;
+    const iy = 1422 + row * 36;
+    const d = itemData[i];
+    Renderer.drawText(`${d.icon} ${d.label}`, ix, iy, { font: '10px system-ui', color: COLORS.TEXT_SECONDARY });
+    Renderer.drawText(`${d.value}`, ix + 95, iy, { font: 'bold 13px system-ui', color: d.color, align: 'right' });
+  }
+
+  let sectionY = 1515;
+
+  // ─── I. 과목별 오답 분석 ───
+  const wrongSubjects = stats.wrongBySubject || {};
+  const correctSubjects = stats.correctBySubject || {};
+  const allAnalysisSubjects = new Set([...Object.keys(wrongSubjects), ...Object.keys(correctSubjects)]);
+
+  if (allAnalysisSubjects.size > 0) {
+    const subjH = 45 + allAnalysisSubjects.size * 34;
+    Renderer.drawGradientCard(20, sectionY, 360, subjH, 14, '#1a1a28', '#151520');
+    Renderer.roundRect(20, sectionY, 360, subjH, 14, null, 'rgba(239,68,68,0.2)');
+    Renderer.drawText('📊 ' + t('stats_wrongBySubject'), 40, sectionY + 18, {
+      font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
+    });
+
+    const subjectInfo = {
+      math: SUBJECTS.MATH, english: SUBJECTS.ENGLISH,
+      korean: SUBJECTS.KOREAN, science: SUBJECTS.SCIENCE
+    };
+
+    let wy = sectionY + 42;
+    for (const subj of allAnalysisSubjects) {
+      const info = subjectInfo[subj];
+      const icon = info?.icon || '📝';
+      const name = t(info?.nameKey || subj);
+      const cCount = correctSubjects[subj] || 0;
+      const wCount = wrongSubjects[subj] || 0;
+      const totalSubj = cCount + wCount;
+      const wrongRate = totalSubj > 0 ? Math.round((wCount / totalSubj) * 100) : 0;
+
+      Renderer.drawText(`${icon} ${name}`, 40, wy, { font: '12px system-ui', color: COLORS.TEXT_PRIMARY });
+
+      // 정답/오답 바
+      const barX = 130;
+      const barMaxW = 130;
+      const barTotal = Math.max(1, totalSubj);
+      const correctBarW = Math.max(0, barMaxW * cCount / barTotal);
+      const wrongBarW = Math.max(0, barMaxW * wCount / barTotal);
+
+      Renderer.roundRect(barX, wy - 4, barMaxW, 10, 5, 'rgba(255,255,255,0.06)');
+      if (correctBarW > 0) Renderer.roundRect(barX, wy - 4, correctBarW, 10, 5, COLORS.SUCCESS);
+      if (wrongBarW > 0) Renderer.roundRect(barX + correctBarW, wy - 4, wrongBarW, 10, 5, COLORS.DANGER);
+
+      Renderer.drawText(`✅${cCount} ❌${wCount}`, 280, wy - 2, { font: '9px system-ui', color: COLORS.TEXT_SECONDARY });
+      Renderer.drawText(`${wrongRate}%`, 355, wy - 2, {
+        font: 'bold 10px system-ui', color: wrongRate >= 50 ? COLORS.DANGER : COLORS.WARNING, align: 'right'
+      });
+
+      wy += 34;
+    }
+    sectionY += subjH + 15;
+  }
+
+  // ─── J. 유형(topic)별 오답 분석 ───
+  const wrongTopics = stats.wrongByTopic || {};
+  const correctTopics = stats.correctByTopic || {};
+  const allTopics = new Set([...Object.keys(wrongTopics), ...Object.keys(correctTopics)]);
+
+  if (allTopics.size > 0) {
+    const topicEntries = [...allTopics].map(topic => ({
+      topic,
+      correct: correctTopics[topic] || 0,
+      wrong: wrongTopics[topic] || 0
+    })).sort((a, b) => b.wrong - a.wrong).slice(0, 8);
+
+    const topicH = 45 + topicEntries.length * 28;
+    Renderer.drawGradientCard(20, sectionY, 360, topicH, 14, '#1a1a28', '#151520');
+    Renderer.roundRect(20, sectionY, 360, topicH, 14, null, 'rgba(168,85,247,0.2)');
+    Renderer.drawText('📝 ' + t('stats_topicAnalysis'), 40, sectionY + 18, {
+      font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
+    });
+
+    let ty = sectionY + 42;
+    for (const entry of topicEntries) {
+      const label = entry.topic.length > 10 ? entry.topic.substring(0, 10) + '..' : entry.topic;
+      const totalT = entry.correct + entry.wrong;
+      const wrongRate = totalT > 0 ? Math.round((entry.wrong / totalT) * 100) : 0;
+
+      Renderer.drawText(label, 40, ty, { font: '11px system-ui', color: COLORS.TEXT_PRIMARY });
+      Renderer.drawText(`✅${entry.correct}`, 210, ty, { font: '10px system-ui', color: COLORS.SUCCESS, align: 'center' });
+      Renderer.drawText(`❌${entry.wrong}`, 270, ty, { font: '10px system-ui', color: COLORS.DANGER, align: 'center' });
+      Renderer.drawText(`${wrongRate}%`, 355, ty, {
+        font: 'bold 10px system-ui', color: wrongRate >= 50 ? COLORS.DANGER : COLORS.WARNING, align: 'right'
+      });
+
+      ty += 28;
+    }
+    sectionY += topicH + 15;
+  }
+
+  // ─── K. 난이도별 오답 분석 ───
+  const wrongByDiff = stats.wrongByDifficulty || {};
+  if (Object.keys(wrongByDiff).length > 0) {
+    const diffH = 45 + Object.keys(wrongByDiff).length * 30;
+    Renderer.drawGradientCard(20, sectionY, 360, diffH, 14, '#1a1a28', '#151520');
+    Renderer.roundRect(20, sectionY, 360, diffH, 14, null, 'rgba(239,68,68,0.15)');
+    Renderer.drawText('🎯 ' + t('stats_diffWrong'), 40, sectionY + 18, {
+      font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
+    });
+
+    const diffNames = { '1': t('easy'), '2': t('normal'), '3': t('hard') };
+    const diffColors = { '1': COLORS.SUCCESS, '2': COLORS.WARNING, '3': COLORS.DANGER };
+    const maxWrong = Math.max(1, ...Object.values(wrongByDiff));
+
+    let dfy = sectionY + 42;
+    for (const diff of ['1', '2', '3']) {
+      const cnt = wrongByDiff[diff];
+      if (cnt === undefined) continue;
+
+      Renderer.drawText(diffNames[diff] || diff, 50, dfy, {
+        font: 'bold 12px system-ui', color: diffColors[diff] || COLORS.TEXT_SECONDARY
+      });
+
+      // 바
+      const barMaxW = 180;
+      const barW = Math.max(5, barMaxW * cnt / maxWrong);
+      Renderer.roundRect(120, dfy - 4, barMaxW, 12, 6, 'rgba(255,255,255,0.06)');
+      Renderer.roundRect(120, dfy - 4, barW, 12, 6, diffColors[diff] || COLORS.DANGER);
+
+      Renderer.drawText(`${cnt}`, 320, dfy, {
+        font: 'bold 12px system-ui', color: diffColors[diff] || COLORS.DANGER, align: 'center'
+      });
+
+      dfy += 30;
+    }
+    sectionY += diffH + 15;
+  }
+
+  // 스크롤 최대값
+  const totalContentHeight = sectionY + 40;
   game.scrollMaxY = Math.max(0, totalContentHeight - 700);
 }

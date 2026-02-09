@@ -10,10 +10,23 @@ export class MonsterManager {
   constructor(db) {
     this.db = db;
     this.monsters = [];
+    this._difficultyIndex = { easy: [], medium: [], hard: [] };
+  }
+
+  // 난이도별 인덱스 구축 (1회 순회로 3개 배열 분배)
+  _buildDifficultyIndex() {
+    this._difficultyIndex = { easy: [], medium: [], hard: [] };
+    for (const m of this.monsters) {
+      const diff = m.difficulty || 2;
+      if (diff <= 1) this._difficultyIndex.easy.push(m);
+      else if (diff >= 3) this._difficultyIndex.hard.push(m);
+      else this._difficultyIndex.medium.push(m);
+    }
   }
 
   async loadMonsters() {
     this.monsters = await this.db.getByIndex('monsters', 'status', 'alive');
+    this._buildDifficultyIndex();
   }
 
   async loadMonstersBySubject(subject) {
@@ -23,6 +36,7 @@ export class MonsterManager {
     } else {
       this.monsters = all.filter(m => m.subject === subject);
     }
+    this._buildDifficultyIndex();
   }
 
   // 보스 타입 확인
@@ -33,16 +47,13 @@ export class MonsterManager {
     return null;
   }
 
-  // 적응형 난이도로 몬스터 선택
+  // 적응형 난이도로 몬스터 선택 (인덱스 직접 참조)
   selectMonsterByDifficulty(accuracyRate, totalAnswers) {
     if (totalAnswers < 5) {
       return this.monsters[Math.floor(Math.random() * this.monsters.length)];
     }
 
-    const easy = this.monsters.filter(m => (m.difficulty || 2) <= 1);
-    const medium = this.monsters.filter(m => (m.difficulty || 2) === 2);
-    const hard = this.monsters.filter(m => (m.difficulty || 2) >= 3);
-
+    const { easy, medium, hard } = this._difficultyIndex;
     let targetPool;
 
     if (accuracyRate >= 0.8) {
@@ -281,10 +292,16 @@ export class MonsterManager {
         }
 
         for (const p of problems) {
-          if (monster.questions.length < 10) {
+          if (monster.questions.length < 10 && p.question && p.answer) {
+            let choices = p.choices || [];
+            let correctIndex = p.correctIndex || 0;
+            if (choices.length > 0 && !choices.includes(p.answer)) {
+              choices[0] = p.answer;
+              correctIndex = 0;
+            }
             monster.questions.push({
               question: p.question, answer: p.answer,
-              choices: p.choices || [], correctIndex: p.correctIndex || 0,
+              choices, correctIndex,
               explanation: p.explanation || '', difficulty: p.difficulty || 3
             });
           }
@@ -297,6 +314,9 @@ export class MonsterManager {
         monster.correctIndex = first.correctIndex || 0;
         monster.explanation = first.explanation || '';
         monster.difficulty = first.difficulty || 3;
+
+        // 비동기 완료 후 선택지 검증 및 셔플
+        this._prepareChoices(monster);
 
         console.log(`✅ 보스 문제 ${problems.length}개 생성 완료!`);
       }
@@ -359,9 +379,18 @@ export class MonsterManager {
       if (problems && problems.length > 0) {
         for (const p of problems) {
           if (monster.questions.length < 10) {
+            const answer = p.answer || '';
+            let choices = p.choices || [];
+            let correctIndex = p.correctIndex || 0;
+            // 정답이 선택지에 없으면 강제 삽입
+            if (answer && choices.length > 0 && !choices.includes(answer)) {
+              choices[0] = answer;
+              correctIndex = 0;
+            }
+            if (!answer || !p.question) continue;
             monster.questions.push({
-              question: p.question, answer: p.answer,
-              choices: p.choices || [], correctIndex: p.correctIndex || 0,
+              question: p.question, answer,
+              choices, correctIndex,
               explanation: p.explanation || ''
             });
           }
@@ -451,10 +480,16 @@ export class MonsterManager {
             }];
           }
           for (const p of problems) {
-            if (existingMonster.questions.length < 10) {
+            if (existingMonster.questions.length < 10 && p.question && p.answer) {
+              let choices = p.choices || [];
+              let correctIndex = p.correctIndex || 0;
+              if (choices.length > 0 && !choices.includes(p.answer)) {
+                choices[0] = p.answer;
+                correctIndex = 0;
+              }
               existingMonster.questions.push({
                 question: p.question, answer: p.answer,
-                choices: p.choices || [], correctIndex: p.correctIndex || 0,
+                choices, correctIndex,
                 explanation: p.explanation || ''
               });
             }
@@ -497,10 +532,16 @@ export class MonsterManager {
             }];
           }
           for (const problem of result.problems) {
-            if (existingMonster.questions.length < 10) {
+            if (existingMonster.questions.length < 10 && problem.question && problem.answer) {
+              let choices = problem.choices || [];
+              let correctIndex = problem.correctIndex || 0;
+              if (choices.length > 0 && !choices.includes(problem.answer)) {
+                choices[0] = problem.answer;
+                correctIndex = 0;
+              }
               existingMonster.questions.push({
                 question: problem.question, answer: problem.answer,
-                choices: problem.choices || [], correctIndex: problem.correctIndex || 0,
+                choices, correctIndex,
                 explanation: problem.explanation || ''
               });
             }
@@ -525,6 +566,7 @@ export class MonsterManager {
       monster.status = 'cleared';
       await this.db.put('monsters', monster);
       this.monsters = this.monsters.filter(m => m.id !== monster.id);
+      this._buildDifficultyIndex();
       // 서버에 상태 업데이트 (serverId가 있으면 사용)
       if (apiService.isLoggedIn() && monster.serverId) {
         apiService.putMonster(monster.serverId, {

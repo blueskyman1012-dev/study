@@ -1,6 +1,6 @@
 // Gemini AI 서비스
 import { apiService } from './ApiService.js';
-import { safeGetItem, safeSetItem } from '../utils/storage.js';
+import { secureGetItem, secureSetItem } from '../utils/storage.js';
 // 텍스트 전용
 const GEMINI_TEXT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 // 이미지 분석용 (Vision 지원)
@@ -14,7 +14,7 @@ export class GeminiService {
   // API 키 설정 (로컬 + 서버 저장)
   setApiKey(key) {
     this.apiKey = key;
-    safeSetItem('gemini_api_key', key);
+    secureSetItem('gemini_api_key', key);
     if (apiService.isLoggedIn()) {
       apiService.saveKey('gemini_api_key', key).catch(err =>
         console.warn('Gemini 키 서버 저장 실패:', err)
@@ -24,7 +24,7 @@ export class GeminiService {
 
   // 저장된 API 키 로드
   loadApiKey() {
-    const savedKey = safeGetItem('gemini_api_key');
+    const savedKey = secureGetItem('gemini_api_key');
     this.apiKey = savedKey || null;
     console.log('Gemini API 키 로드됨:', this.apiKey ? '있음' : '없음');
     return this.apiKey;

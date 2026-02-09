@@ -104,7 +104,6 @@ export class AIGenerateManager {
       game.generatingMessage = t('generating');
       game.generatingSubMessage = t('generatingDesc', count);
       const problems = await problemGeneratorService.generateProblems(selectedTopic, diff, count, subject);
-      game.isGenerating = false;
 
       if (problems && problems.length > 0) {
         let addedCount = 0;
@@ -125,9 +124,10 @@ export class AIGenerateManager {
         await game.showModal(t('generated', addedCount, topics[selectedTopic].name, diffName, example.question, example.answer));
       } else { await game.showModal(t('generateFailed')); }
     } catch (err) {
-      game.isGenerating = false;
       console.error('AI 문제 생성 오류:', err);
       await game.showModal(t('error') + err.message);
+    } finally {
+      game.isGenerating = false;
     }
   }
 }

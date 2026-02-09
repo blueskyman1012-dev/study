@@ -2,12 +2,28 @@
 export class StatsManager {
   constructor(game) {
     this.game = game;
+    this._cachedStats = null;
+    this._cacheKey = null;
+  }
+
+  // 캐시 무효화 (런 완료/몬스터 등록 시 호출)
+  invalidateCache() {
+    this._cachedStats = null;
+    this._cacheKey = null;
   }
 
   async aggregateStats() {
     const db = this.game.db;
     const runs = await db.getAll('runs') || [];
     const monsters = await db.getAll('monsters') || [];
+
+    // 캐시 키: 런 수 + 몬스터 수 + 마지막 런 시간
+    const lastRunTime = runs.length > 0 ? (runs[runs.length - 1].startTime || 0) : 0;
+    const cacheKey = `${runs.length}_${monsters.length}_${lastRunTime}`;
+    if (this._cacheKey === cacheKey && this._cachedStats) {
+      this.game.cachedStats = this._cachedStats;
+      return this._cachedStats;
+    }
 
     const stats = {
       totalRuns: runs.length,
@@ -19,6 +35,20 @@ export class StatsManager {
       totalGoldEarned: 0,
       bySubject: {},
       byDifficulty: { 1: 0, 2: 0, 3: 0 },
+
+      // 아이템 사용 누적
+      totalSkips: 0,
+      totalHints: 0,
+      totalTimeBoosts: 0,
+      totalRevives: 0,
+      totalTimeouts: 0,
+      avgSkipsPerRun: 0,
+      avgHintsPerRun: 0,
+      wrongBySubject: {},
+      correctBySubject: {},
+      wrongByTopic: {},
+      correctByTopic: {},
+      wrongByDifficulty: {},
 
       // 새 메트릭
       winRate: 0,
@@ -38,8 +68,18 @@ export class StatsManager {
       totalDefeated: 0
     };
 
-    // 시간순 정렬 (연승 계산용)
-    const sortedRuns = [...runs].sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
+    // 시간순 정렬 (연승 계산용) - 이미 정렬되어 있으면 스킵
+    let sortedRuns = runs;
+    let sorted = true;
+    for (let i = 1; i < runs.length; i++) {
+      if ((runs[i].startTime || 0) < (runs[i - 1].startTime || 0)) {
+        sorted = false;
+        break;
+      }
+    }
+    if (!sorted) {
+      sortedRuns = [...runs].sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
+    }
 
     let currentStreak = 0;
     let bestStreak = 0;
@@ -57,6 +97,44 @@ export class StatsManager {
       stats.totalCorrect += run.correctAnswers || 0;
       if ((run.bestCombo || 0) > stats.bestCombo) stats.bestCombo = run.bestCombo;
       stats.totalGoldEarned += run.earnedGold || 0;
+
+      // 아이템 사용 누적
+      stats.totalSkips += run.skipCount || 0;
+      stats.totalHints += run.hintCount || 0;
+      stats.totalTimeBoosts += run.timeBoostCount || 0;
+      stats.totalRevives += run.reviveCount || 0;
+      stats.totalTimeouts += run.timeoutCount || 0;
+
+      // 과목별 정답/오답 누적
+      if (run.correctBySubject) {
+        for (const [subj, cnt] of Object.entries(run.correctBySubject)) {
+          stats.correctBySubject[subj] = (stats.correctBySubject[subj] || 0) + cnt;
+        }
+      }
+      if (run.wrongBySubject) {
+        for (const [subj, cnt] of Object.entries(run.wrongBySubject)) {
+          stats.wrongBySubject[subj] = (stats.wrongBySubject[subj] || 0) + cnt;
+        }
+      }
+
+      // 유형(topic)별 누적
+      if (run.correctByTopic) {
+        for (const [topic, cnt] of Object.entries(run.correctByTopic)) {
+          stats.correctByTopic[topic] = (stats.correctByTopic[topic] || 0) + cnt;
+        }
+      }
+      if (run.wrongByTopic) {
+        for (const [topic, cnt] of Object.entries(run.wrongByTopic)) {
+          stats.wrongByTopic[topic] = (stats.wrongByTopic[topic] || 0) + cnt;
+        }
+      }
+
+      // 난이도별 오답 누적
+      if (run.wrongByDifficulty) {
+        for (const [diff, cnt] of Object.entries(run.wrongByDifficulty)) {
+          stats.wrongByDifficulty[diff] = (stats.wrongByDifficulty[diff] || 0) + cnt;
+        }
+      }
 
       // 시간 통계
       if (run.startTime && run.endTime) {
@@ -82,6 +160,8 @@ export class StatsManager {
       stats.winRate = Math.round((stats.totalClears / stats.totalRuns) * 100);
       stats.avgRunDuration = stats.totalPlayTime / stats.totalRuns;
       stats.avgGoldPerRun = Math.round(stats.totalGoldEarned / stats.totalRuns);
+      stats.avgSkipsPerRun = Math.round((stats.totalSkips / stats.totalRuns) * 10) / 10;
+      stats.avgHintsPerRun = Math.round((stats.totalHints / stats.totalRuns) * 10) / 10;
     }
 
     // 전체 평균 정답률
@@ -89,23 +169,27 @@ export class StatsManager {
       stats.avgAccuracy = Math.round((stats.totalCorrect / stats.totalAnswers) * 100);
     }
 
-    // 최근 10런
+    // 최근 10런 - 단일 for 루프로 recentClears/recentTotal/recentCorrect 동시 계산
     const recent10 = sortedRuns.slice(-10);
-    stats.recentRuns = recent10.map(r => ({
-      result: r.result,
-      accuracy: r.totalAnswers > 0 ? Math.round((r.correctAnswers / r.totalAnswers) * 100) : 0,
-      combo: r.bestCombo || 0,
-      gold: r.earnedGold || 0,
-      duration: (r.startTime && r.endTime) ? r.endTime - r.startTime : 0,
-      date: r.startTime || 0
-    }));
+    let recentClears = 0, recentTotal = 0, recentCorrect = 0;
+    stats.recentRuns = new Array(recent10.length);
+    for (let i = 0; i < recent10.length; i++) {
+      const r = recent10[i];
+      if (r.result === 'clear') recentClears++;
+      recentTotal += r.totalAnswers || 0;
+      recentCorrect += r.correctAnswers || 0;
+      stats.recentRuns[i] = {
+        result: r.result,
+        accuracy: r.totalAnswers > 0 ? Math.round((r.correctAnswers / r.totalAnswers) * 100) : 0,
+        combo: r.bestCombo || 0,
+        gold: r.earnedGold || 0,
+        duration: (r.startTime && r.endTime) ? r.endTime - r.startTime : 0,
+        date: r.startTime || 0
+      };
+    }
 
-    // 최근 승률/정답률
     if (recent10.length > 0) {
-      const recentClears = recent10.filter(r => r.result === 'clear').length;
       stats.recentWinRate = Math.round((recentClears / recent10.length) * 100);
-      const recentTotal = recent10.reduce((s, r) => s + (r.totalAnswers || 0), 0);
-      const recentCorrect = recent10.reduce((s, r) => s + (r.correctAnswers || 0), 0);
       stats.recentAccuracy = recentTotal > 0 ? Math.round((recentCorrect / recentTotal) * 100) : 0;
     }
 
@@ -133,6 +217,8 @@ export class StatsManager {
     }
 
     this.game.cachedStats = stats;
+    this._cachedStats = stats;
+    this._cacheKey = cacheKey;
     return stats;
   }
 }

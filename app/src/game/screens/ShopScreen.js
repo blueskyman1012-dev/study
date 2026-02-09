@@ -1,6 +1,6 @@
 // 상점 화면 렌더링 (탭 분류)
 import { Renderer, BG_THEMES } from '../../canvas/Renderer.js';
-import { SCREENS, COLORS, UPGRADES, SHOP_ITEMS } from '../../utils/constants.js';
+import { SCREENS, COLORS, UPGRADES, SHOP_ITEMS, COSMETIC_ITEMS } from '../../utils/constants.js';
 import { t } from '../../i18n/i18n.js';
 
 
@@ -360,10 +360,11 @@ function renderConsumeTab(game, player, shopManager, startY, W, H) {
 // ─── 꾸미기 탭 ───
 function renderCosmeticTab(game, player, shopManager, startY, W, H) {
   let y = startY;
+  const cosmetics = player.cosmetics || {};
+  const panelX = 10, panelW = W - 20;
 
   // === 현재 테마 표시 패널 ===
   const panelH = 50;
-  const panelX = 10, panelW = W - 20;
   Renderer.drawGradientCard(panelX, y, panelW, panelH, 10, 'rgba(99,102,241,0.12)', 'rgba(99,102,241,0.04)');
   Renderer.ctx.save();
   Renderer.ctx.strokeStyle = 'rgba(99,102,241,0.3)';
@@ -379,102 +380,224 @@ function renderCosmeticTab(game, player, shopManager, startY, W, H) {
   Renderer.drawText(t('shopCurrentTheme'), panelX + 12, y + 10, {
     font: 'bold 11px system-ui', color: COLORS.ACCENT_LIGHT
   });
-
-  // 컬러 스와치 원형
   Renderer.drawCircle(panelX + 12 + Renderer.ctx.measureText(t('shopCurrentTheme')).width + 16, y + 17, 7, currentTheme.grid);
-
-  // 테마 이름
   Renderer.drawText(t('theme_' + currentThemeId), panelX + 12, y + 30, {
     font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY
   });
 
   y += panelH + 10;
 
-  // === 테마 미리보기 (7개 원형 스와치) ===
-  const swatchH = 50;
+  // === 테마 스와치 (구매 가능) ===
+  const swatchH = 60;
   Renderer.drawGradientCard(10, y, panelW, swatchH, 10, '#1e1e2e', '#16161f');
+  Renderer.drawText(t('cosmetic_themes'), 22, y + 8, {
+    font: 'bold 11px system-ui', color: COLORS.ACCENT_LIGHT
+  });
 
+  const purchasedThemes = cosmetics.purchasedThemes || ['default'];
   const swatchCount = BG_THEMES.length;
   const swatchSpacing = panelW / (swatchCount + 1);
   BG_THEMES.forEach((theme, i) => {
     const cx = 10 + swatchSpacing * (i + 1);
-    const cy = y + swatchH / 2;
+    const cy = y + 36;
     const isActive = theme.id === currentThemeId;
+    const isPurchased = purchasedThemes.includes(theme.id);
     const radius = isActive ? 14 : 12;
 
-    // 외곽 링 (활성 테마)
     if (isActive) {
       Renderer.drawCircle(cx, cy, radius + 3, null, '#fff');
     }
-
-    // 컬러 스와치
     Renderer.drawCircle(cx, cy, radius, theme.grid);
 
-    // 체크마크 (활성 테마)
     if (isActive) {
-      Renderer.drawText('✓', cx, cy - 7, {
-        font: 'bold 12px system-ui', color: '#fff', align: 'center'
-      });
+      Renderer.drawText('✓', cx, cy - 7, { font: 'bold 12px system-ui', color: '#fff', align: 'center' });
+    } else if (!isPurchased) {
+      // 자물쇠
+      Renderer.ctx.save();
+      Renderer.ctx.globalAlpha = 0.6;
+      Renderer.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      Renderer.ctx.beginPath();
+      Renderer.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      Renderer.ctx.fill();
+      Renderer.ctx.restore();
+      Renderer.drawText('🔒', cx, cy - 8, { font: '10px system-ui', align: 'center' });
     }
+
+    // 클릭 영역
+    game.registerClickArea(`theme_${theme.id}`, cx - 16, cy - 16, 32, 32, () => {
+      if (isPurchased) {
+        shopManager.equipCosmetic('theme', theme.id);
+      } else {
+        shopManager.buyCosmetic('theme', theme.id);
+      }
+    });
   });
 
   y += swatchH + 10;
 
   // === 랜덤 배경 카드 ===
-  const cardH = 90;
-  COSMETIC_KEYS.forEach((key) => {
-    const item = SHOP_ITEMS[key];
-    if (!item) return;
+  y = renderRandomBgCard(game, player, shopManager, y, W);
+
+  // === 파티클 스타일 섹션 ===
+  y = renderCosmeticSection(game, player, shopManager, y, W, 'particle', cosmetics);
+
+  // === 데미지 텍스트 스타일 섹션 ===
+  y = renderCosmeticSection(game, player, shopManager, y, W, 'damageText', cosmetics);
+
+  // === 정답 이펙트 섹션 ===
+  y = renderCosmeticSection(game, player, shopManager, y, W, 'correctFlash', cosmetics);
+
+  y += 20;
+  game.scrollMaxY = Math.max(0, y - H);
+}
+
+function renderRandomBgCard(game, player, shopManager, y, W) {
+  const item = SHOP_ITEMS.randomBg;
+  const canBuy = player.gold >= item.price;
+  const cardH = 70;
+  const innerH = cardH - 6;
+
+  Renderer.drawGradientCard(10, y, W - 20, innerH, 12, '#1e1e2e', '#16161f');
+  if (canBuy) {
+    Renderer.roundRect(10, y + 6, 3, innerH - 12, 1.5, COLORS.ACCENT);
+  } else {
+    Renderer.roundRect(10, y, W - 20, innerH, 12, 'rgba(0,0,0,0.35)');
+  }
+
+  const iconCX = 42, iconCY = y + innerH / 2;
+  Renderer.roundRect(iconCX - 18, iconCY - 18, 36, 36, 18, 'rgba(99,102,241,0.15)');
+  Renderer.drawText(item.icon, iconCX, iconCY - 10, { font: '22px system-ui', align: 'center' });
+
+  Renderer.drawText(t(item.nameKey), 72, y + Math.round(innerH * 0.35), {
+    font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY
+  });
+
+  const btnW = 72, btnH = 28;
+  const btnX = W - 10 - btnW - 8;
+  const btnY = y + Math.round((innerH - btnH) / 2);
+  Renderer.roundRect(btnX, btnY, btnW, btnH, 8, canBuy ? COLORS.WARNING : COLORS.BG_SECONDARY);
+  Renderer.drawText(`${item.price}G`, btnX + btnW / 2, btnY + 7, {
+    font: 'bold 13px system-ui', color: canBuy ? '#000' : COLORS.TEXT_SECONDARY, align: 'center'
+  });
+  game.registerClickArea('buy_randomBg', btnX, btnY, btnW, btnH, () => shopManager.buyItem('randomBg'));
+
+  return y + cardH;
+}
+
+function renderCosmeticSection(game, player, shopManager, y, W, category, cosmetics) {
+  const cat = COSMETIC_ITEMS[category];
+  if (!cat) return y;
+  const panelW = W - 20;
+
+  // 섹션 헤더
+  Renderer.drawText(`${cat.icon} ${t(cat.nameKey)}`, 22, y + 2, {
+    font: 'bold 13px system-ui', color: COLORS.ACCENT_LIGHT
+  });
+  y += 22;
+
+  const purchasedKey = category === 'particle' ? 'purchasedParticles'
+    : category === 'damageText' ? 'purchasedDamageText'
+    : 'purchasedFlash';
+  const activeKey = category === 'particle' ? 'particleStyle'
+    : category === 'damageText' ? 'damageTextStyle'
+    : 'correctFlash';
+  const purchased = cosmetics[purchasedKey] || ['default'];
+  const active = cosmetics[activeKey] || 'default';
+
+  const cardH = 56;
+  cat.items.forEach((item) => {
+    const isPurchased = item.price === 0 || purchased.includes(item.id);
+    const isActive = item.id === active;
     const canBuy = player.gold >= item.price;
+    const innerH = cardH - 4;
 
-    const innerH = cardH - 6;
+    Renderer.drawGradientCard(10, y, panelW, innerH, 10, '#1e1e2e', '#16161f');
 
-    // 그래디언트 카드 배경
-    Renderer.drawGradientCard(10, y, W - 20, innerH, 12, '#1e1e2e', '#16161f');
-
-    // 왼쪽 악센트 테두리
-    if (canBuy) {
-      Renderer.roundRect(10, y + 6, 3, innerH - 12, 1.5, COLORS.ACCENT);
+    // 활성 아이템 왼쪽 보라 악센트
+    if (isActive) {
+      Renderer.roundRect(10, y + 4, 3, innerH - 8, 1.5, '#a855f7');
     }
-
     // 구매 불가 시 어둡게
-    if (!canBuy) {
-      Renderer.roundRect(10, y, W - 20, innerH, 12, 'rgba(0,0,0,0.35)');
+    if (!isPurchased && !canBuy) {
+      Renderer.roundRect(10, y, panelW, innerH, 10, 'rgba(0,0,0,0.3)');
     }
 
-    // 왼쪽 아이콘 원형 영역
-    const iconCX = 42;
+    // 아이콘 영역
+    const iconCX = 36;
     const iconCY = y + innerH / 2;
-    Renderer.roundRect(iconCX - 18, iconCY - 18, 36, 36, 18, 'rgba(99,102,241,0.15)');
-    Renderer.drawText(item.icon, iconCX, iconCY - 10, { font: '22px system-ui', align: 'center' });
+    Renderer.roundRect(iconCX - 14, iconCY - 14, 28, 28, 14,
+      isActive ? 'rgba(168,85,247,0.25)' : 'rgba(99,102,241,0.12)');
+
+    // 카테고리별 미리보기 아이콘
+    if (category === 'particle' && item.colors) {
+      // 미니 컬러 점 3개
+      const cols = item.colors;
+      for (let ci = 0; ci < Math.min(3, cols.length); ci++) {
+        Renderer.drawCircle(iconCX - 6 + ci * 6, iconCY, 3, cols[ci]);
+      }
+    } else if (category === 'correctFlash' && item.color) {
+      Renderer.drawCircle(iconCX, iconCY, 10, item.color);
+    } else if (category === 'damageText') {
+      const dmgColor = item.color || '#fbbf24';
+      Renderer.drawText('-99', iconCX, iconCY - 8, {
+        font: `bold ${item.fontScale ? '13' : '10'}px system-ui`, color: dmgColor, align: 'center'
+      });
+    } else {
+      Renderer.drawText(cat.icon, iconCX, iconCY - 8, { font: '14px system-ui', align: 'center' });
+    }
 
     // 이름
-    const nameY = y + Math.round(innerH * 0.3);
-    Renderer.drawText(t(item.nameKey), 72, nameY, {
-      font: 'bold 15px system-ui', color: COLORS.TEXT_PRIMARY
+    Renderer.drawText(t(item.nameKey), 60, y + 10, {
+      font: `${isActive ? 'bold ' : ''}13px system-ui`,
+      color: isActive ? '#e2e8f0' : COLORS.TEXT_SECONDARY
     });
 
-    // 설명
-    const descY = y + Math.round(innerH * 0.62);
-    Renderer.drawText(t(item.descKey), 72, descY, { font: '12px system-ui', color: COLORS.TEXT_SECONDARY });
+    // 장착 상태 태그
+    if (isActive) {
+      const tagX = 60 + Renderer.ctx.measureText(t(item.nameKey)).width + 6;
+      Renderer.roundRect(tagX, y + 6, 36, 16, 8, 'rgba(168,85,247,0.3)');
+      Renderer.drawText(t('cosmetic_equipped'), tagX + 18, y + 8, {
+        font: 'bold 9px system-ui', color: '#c084fc', align: 'center'
+      });
+    }
 
-    // 구매 버튼
-    const btnW = 88, btnH = 30;
+    // 버튼 (오른쪽)
+    const btnW = 72, btnH = 26;
     const btnX = W - 10 - btnW - 8;
     const btnY = y + Math.round((innerH - btnH) / 2);
-    const btnColor = canBuy ? COLORS.WARNING : COLORS.BG_SECONDARY;
-    Renderer.roundRect(btnX, btnY, btnW, btnH, 8, btnColor);
-    Renderer.drawText(`${item.price}G`, btnX + btnW / 2, btnY + 8, {
-      font: 'bold 13px system-ui', color: canBuy ? '#000' : COLORS.TEXT_SECONDARY, align: 'center'
-    });
-    // 구매 가능이든 불가든 클릭 영역 등록
-    game.registerClickArea(`buy_${key}`, btnX, btnY, btnW, btnH, () => shopManager.buyItem(key));
+
+    if (isActive) {
+      // 현재 장착 중 → 비활성 표시
+      Renderer.roundRect(btnX, btnY, btnW, btnH, 8, 'rgba(168,85,247,0.2)');
+      Renderer.drawText(t('cosmetic_equipped'), btnX + btnW / 2, btnY + 6, {
+        font: 'bold 11px system-ui', color: '#c084fc', align: 'center'
+      });
+    } else if (isPurchased) {
+      // 구매됨 → 장착 버튼
+      Renderer.roundRect(btnX, btnY, btnW, btnH, 8, COLORS.ACCENT);
+      Renderer.drawText(t('cosmetic_equip'), btnX + btnW / 2, btnY + 6, {
+        font: 'bold 11px system-ui', color: '#fff', align: 'center'
+      });
+      game.registerClickArea(`equip_${category}_${item.id}`, btnX, btnY, btnW, btnH, () => {
+        shopManager.equipCosmetic(category, item.id);
+      });
+    } else {
+      // 미구매 → 구매 버튼
+      const btnColor = canBuy ? COLORS.WARNING : COLORS.BG_SECONDARY;
+      Renderer.roundRect(btnX, btnY, btnW, btnH, 8, btnColor);
+      Renderer.drawText(`${item.price}G`, btnX + btnW / 2, btnY + 6, {
+        font: 'bold 12px system-ui', color: canBuy ? '#000' : COLORS.TEXT_SECONDARY, align: 'center'
+      });
+      game.registerClickArea(`buy_${category}_${item.id}`, btnX, btnY, btnW, btnH, () => {
+        shopManager.buyCosmetic(category, item.id);
+      });
+    }
 
     y += cardH;
   });
 
-  y += 20;
-  game.scrollMaxY = Math.max(0, y - H);
+  y += 6;
+  return y;
 }
 
 // 고정 헤더 + 탭 바 렌더링 (Game.js에서 스크롤 복원 후 호출)

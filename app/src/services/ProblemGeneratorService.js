@@ -1,6 +1,6 @@
 // AI 문제 생성 서비스 (수학 전용)
 // SmilePrint API 사용
-import { safeGetItem } from '../utils/storage.js';
+import { secureGetItem } from '../utils/storage.js';
 
 const API_BASE_URL = 'https://caricature-api-rust.wizice.com';
 const DEFAULT_MODEL = 'gemini-2.0-flash';
@@ -39,11 +39,12 @@ export class ProblemGeneratorService {
 
   // API 키 로드 (ImageAnalysisService와 공유)
   loadApiKey() {
-    this.apiKey = safeGetItem('smileprint_api_key');
+    this.apiKey = secureGetItem('smileprint_api_key');
     return this.apiKey;
   }
 
   hasApiKey() {
+    this.loadApiKey();
     return !!this.apiKey;
   }
 
@@ -246,10 +247,10 @@ ${topicInfo.name} (${topicInfo.level}등학교) 문제를 ${count}개 만드세�
   }
 
   // 완료 대기
-  async waitForCompletion(jobId, accessKey, maxAttempts = 60) {
+  async waitForCompletion(jobId, accessKey, maxAttempts = 30) {
     for (let i = 0; i < maxAttempts; i++) {
-      // 첫 폴링은 짧게, 이후 점진적으로 늘림
-      const delay = i === 0 ? 300 : i < 5 ? 800 : 1500;
+      // 첫 폴링은 짧게, 이후 균일하게 1초
+      const delay = i === 0 ? 300 : 1000;
       await this.sleep(delay);
 
       const response = await fetch(`${API_BASE_URL}/api/v1/analyze/status/${jobId}`, {

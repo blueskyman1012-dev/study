@@ -16,10 +16,12 @@ export function renderRegisterScreen(game) {
     game.changeScreen(SCREENS.MAIN);
   });
 
-  // 이미지 미리보기
-  if (game.pendingImage && !game.previewImageLoaded) {
+  // 이미지 미리보기 (로딩 중 중복 생성 방지)
+  if (game.pendingImage && !game.previewImageLoaded && !game._previewImageLoading) {
+    game._previewImageLoading = true;
     game.previewImg = new Image();
-    game.previewImg.onload = () => { game.previewImageLoaded = true; };
+    game.previewImg.onload = () => { game.previewImageLoaded = true; game._previewImageLoading = false; };
+    game.previewImg.onerror = () => { game._previewImageLoading = false; };
     game.previewImg.src = game.pendingImage;
   }
 

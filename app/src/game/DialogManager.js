@@ -3,6 +3,16 @@ import { Renderer } from '../canvas/Renderer.js';
 import { GAME_CONFIG, LEVEL_CONFIG, COLORS, UPGRADES } from '../utils/constants.js';
 import { t } from '../i18n/i18n.js';
 
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export class DialogManager {
   constructor(game) {
     this.game = game;
@@ -32,7 +42,7 @@ export class DialogManager {
 
       modal.innerHTML = `
         <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:20px;width:320px;max-height:80vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
-          <div style="white-space:pre-wrap;font-size:15px;line-height:1.6;margin-bottom:16px;">${message}</div>
+          <div style="white-space:pre-wrap;font-size:15px;line-height:1.6;margin-bottom:16px;">${escapeHtml(message)}</div>
           <button id="modal-ok-btn" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${t('close')}</button>
         </div>
       `;
@@ -54,7 +64,7 @@ export class DialogManager {
 
       modal.innerHTML = `
         <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:20px;width:320px;max-height:80vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
-          <div style="white-space:pre-wrap;font-size:15px;line-height:1.6;margin-bottom:16px;">${message}</div>
+          <div style="white-space:pre-wrap;font-size:15px;line-height:1.6;margin-bottom:16px;">${escapeHtml(message)}</div>
           <div style="display:flex;gap:10px;">
             <button id="modal-cancel-btn" style="flex:1;padding:12px;border:none;border-radius:10px;background:#374151;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${t('cancel') || '취소'}</button>
             <button id="modal-ok-btn" style="flex:1;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${t('confirm') || '확인'}</button>
@@ -80,8 +90,8 @@ export class DialogManager {
 
       modal.innerHTML = `
         <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:20px;width:320px;max-height:80vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
-          <div style="white-space:pre-wrap;font-size:15px;line-height:1.6;margin-bottom:12px;">${message}</div>
-          <input id="modal-input" type="text" value="${defaultValue}" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #4b5563;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:15px;margin-bottom:12px;">
+          <div style="white-space:pre-wrap;font-size:15px;line-height:1.6;margin-bottom:12px;">${escapeHtml(message)}</div>
+          <input id="modal-input" type="text" value="${escapeHtml(defaultValue)}" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #4b5563;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:15px;margin-bottom:12px;">
           <div style="display:flex;gap:10px;">
             <button id="modal-cancel-btn" style="flex:1;padding:12px;border:none;border-radius:10px;background:#374151;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${t('cancel') || '취소'}</button>
             <button id="modal-ok-btn" style="flex:1;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${t('confirm') || '확인'}</button>

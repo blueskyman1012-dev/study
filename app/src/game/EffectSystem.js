@@ -1,6 +1,6 @@
 // 시각 효과 시스템 (파티클, 플로팅텍스트, 화면흔들림, 플래시)
 import { Renderer } from '../canvas/Renderer.js';
-import { GAME_CONFIG } from '../utils/constants.js';
+import { GAME_CONFIG, COSMETIC_ITEMS } from '../utils/constants.js';
 import { t } from '../i18n/i18n.js';
 
 export class EffectSystem {
@@ -17,30 +17,63 @@ export class EffectSystem {
     this._achievementQueue = [];
   }
 
+  setCosmetics(cosmetics) {
+    this._cosmetics = cosmetics;
+  }
+
+  getCorrectFlashColor() {
+    if (!this._cosmetics) return '#22c55e';
+    const style = this._cosmetics.correctFlash || 'default';
+    const item = COSMETIC_ITEMS.correctFlash.items.find(i => i.id === style);
+    return item?.color || '#22c55e';
+  }
+
+  // 활성 이펙트 유무 (dirty 렌더링 판단용)
+  hasActiveEffects() {
+    return this.particles.length > 0 ||
+      this.floatingTexts.length > 0 ||
+      this.screenShake > 0 ||
+      this.screenFlash !== null ||
+      this.bossEntrance > 0 ||
+      this.levelUpPopup !== null ||
+      this.achievementBanner !== null;
+  }
+
   update() {
     const now = Date.now();
     this.pulseTime = now;
 
-    // 파티클 업데이트 (in-place 삭제로 GC 부하 감소)
-    for (let i = this.particles.length - 1; i >= 0; i--) {
+    // 활성 이펙트 없으면 조기 종료
+    if (!this.hasActiveEffects()) return;
+
+    // 파티클 업데이트 (swap-pop으로 O(n) 삭제)
+    let writeIdx = 0;
+    for (let i = 0; i < this.particles.length; i++) {
       const p = this.particles[i];
       p.x += p.vx;
       p.y += p.vy;
       p.vy += p.gravity || 0;
       p.life -= 16;
       p.alpha = Math.max(0, p.life / p.maxLife);
-      if (p.life <= 0) this.particles.splice(i, 1);
+      if (p.life > 0) {
+        this.particles[writeIdx++] = p;
+      }
     }
+    this.particles.length = writeIdx;
 
-    // 떠오르는 텍스트 업데이트 (in-place 삭제)
-    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+    // 떠오르는 텍스트 업데이트 (swap-pop)
+    writeIdx = 0;
+    for (let i = 0; i < this.floatingTexts.length; i++) {
       const ft = this.floatingTexts[i];
       ft.y -= ft.speed;
       ft.life -= 16;
       ft.alpha = Math.max(0, ft.life / ft.maxLife);
       ft.scale = 1 + (1 - ft.alpha) * 0.3;
-      if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+      if (ft.life > 0) {
+        this.floatingTexts[writeIdx++] = ft;
+      }
     }
+    this.floatingTexts.length = writeIdx;
 
     // 화면 흔들림 감소
     if (this.screenShake > 0) {
@@ -101,30 +134,43 @@ export class EffectSystem {
   render() {
     const ctx = Renderer.ctx;
 
-    // 파티클 렌더링
-    for (const p of this.particles) {
+    // 파티클 배치 렌더링 (save/restore 1회)
+    if (this.particles.length > 0) {
       ctx.save();
-      ctx.globalAlpha = p.alpha;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      const TWO_PI = Math.PI * 2;
+      for (const p of this.particles) {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, TWO_PI);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
-    // 떠오르는 텍스트 렌더링
-    for (const t of this.floatingTexts) {
+    // 떠오르는 텍스트 배치 렌더링
+    if (this.floatingTexts.length > 0) {
       ctx.save();
-      ctx.globalAlpha = t.alpha;
-      ctx.font = `bold ${Math.round(t.fontSize * t.scale)}px system-ui`;
-      ctx.fillStyle = t.color;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-
-      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-      ctx.lineWidth = 3;
-      ctx.strokeText(t.text, t.x, t.y);
-      ctx.fillText(t.text, t.x, t.y);
+      for (const ft of this.floatingTexts) {
+        ctx.globalAlpha = ft.alpha;
+        ctx.font = `bold ${Math.round(ft.fontSize * ft.scale)}px system-ui`;
+        ctx.fillStyle = ft.color;
+        if (ft.glow) {
+          ctx.shadowColor = ft.color;
+          ctx.shadowBlur = 12;
+        } else {
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillText(ft.text, ft.x, ft.y);
+      }
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
@@ -216,16 +262,31 @@ export class EffectSystem {
   }
 
   addDamageText(x, y, damage, isPlayerDamage = false) {
+    let color = isPlayerDamage ? '#ef4444' : '#fbbf24';
+    let fontSize = isPlayerDamage ? 24 : 20;
+    let glow = false;
+
+    if (!isPlayerDamage && this._cosmetics) {
+      const style = this._cosmetics.damageTextStyle || 'default';
+      if (style === 'neon') {
+        color = '#00ffff';
+        glow = true;
+      } else if (style === 'pixel') {
+        fontSize = Math.round(fontSize * 1.4);
+      }
+    }
+
     this.floatingTexts.push({
       x, y,
       text: `-${damage}`,
-      color: isPlayerDamage ? '#ef4444' : '#fbbf24',
-      fontSize: isPlayerDamage ? 24 : 20,
+      color,
+      fontSize,
       speed: 2,
       life: 800,
       maxLife: 800,
       alpha: 1,
-      scale: 1
+      scale: 1,
+      glow
     });
   }
 
@@ -259,17 +320,28 @@ export class EffectSystem {
     this.comboGlow = 1;
   }
 
-  addParticleExplosion(x, y, color, count = 12) {
+  addParticleExplosion(x, y, color, count = 12, useCosmetic = false) {
+    let particleColors = null;
+    if (useCosmetic && this._cosmetics) {
+      const style = this._cosmetics.particleStyle || 'default';
+      if (style !== 'default') {
+        const item = COSMETIC_ITEMS.particle.items.find(i => i.id === style);
+        if (item?.colors) particleColors = item.colors;
+      }
+    }
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
       const speed = 2 + Math.random() * 3;
+      const c = particleColors
+        ? particleColors[Math.floor(Math.random() * particleColors.length)]
+        : color;
       this.particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         gravity: 0.1,
         size: 3 + Math.random() * 4,
-        color,
+        color: c,
         life: 500 + Math.random() * 300,
         maxLife: 800,
         alpha: 1

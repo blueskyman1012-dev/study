@@ -1,7 +1,7 @@
 // SmilePrint Image-to-Text API 서비스
 // 문제 이미지 분석용
 import { apiService } from './ApiService.js';
-import { safeGetItem, safeSetItem } from '../utils/storage.js';
+import { secureGetItem, secureSetItem } from '../utils/storage.js';
 
 const API_BASE_URL = 'https://caricature-api-rust.wizice.com';
 const DEFAULT_MODEL = 'gemini-2.0-flash';
@@ -15,7 +15,7 @@ export class ImageAnalysisService {
   // API 키 설정 (로컬 + 서버 저장)
   setApiKey(key) {
     this.apiKey = key;
-    safeSetItem('smileprint_api_key', key);
+    secureSetItem('smileprint_api_key', key);
     // 로그인 상태면 서버에도 암호화 저장
     if (apiService.isLoggedIn()) {
       apiService.saveKey('smileprint_api_key', key).catch(err =>
@@ -26,7 +26,7 @@ export class ImageAnalysisService {
 
   // 저장된 API 키 로드
   loadApiKey() {
-    this.apiKey = safeGetItem('smileprint_api_key');
+    this.apiKey = secureGetItem('smileprint_api_key');
     return this.apiKey;
   }
 
@@ -123,20 +123,48 @@ export class ImageAnalysisService {
 
     console.log('🔍 SmilePrint API 호출 시작...');
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/analyze/image`, {
-      method: 'POST',
-      headers: {
-        'X-API-Key': this.apiKey
-      },
-      body: formData
-    });
+    // 재시도 1회 (서버 오류 시에만)
+    let lastError = null;
+    let jobData = null;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.errorMessage || `API 오류: ${response.status}`);
+    for (let retry = 0; retry <= 1; retry++) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/analyze/image`, {
+          method: 'POST',
+          headers: {
+            'X-API-Key': this.apiKey
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const status = response.status;
+          // 인증 오류(401/403)나 잘못된 요청(400)은 재시도 불필요
+          if (status === 401 || status === 403 || status === 400) {
+            throw new Error(errorData.errorMessage || `API 오류: ${status}`);
+          }
+          throw new Error(errorData.errorMessage || `서버 오류: ${status}`);
+        }
+
+        jobData = await response.json();
+        break; // 성공
+      } catch (err) {
+        lastError = err;
+        // 클라이언트 오류는 재시도하지 않음
+        if (err.message.includes('API 오류')) throw err;
+
+        if (retry < 1) {
+          console.warn(`🔄 이미지 분석 요청 재시도 (1초 후):`, err.message);
+          await this.sleep(1000);
+        }
+      }
     }
 
-    const jobData = await response.json();
+    if (!jobData) {
+      throw new Error(`이미지 분석 요청 실패: ${lastError?.message || '알 수 없는 오류'}`);
+    }
+
     console.log('📋 Job 생성됨:', jobData.jobId);
 
     return {
@@ -146,12 +174,11 @@ export class ImageAnalysisService {
     };
   }
 
-  // 분석 상태 확인 (재시도 포함)
+  // 분석 상태 확인 (재시도 1회)
   async checkStatus(jobId, accessKey) {
-    const maxRetries = 3;
     let lastError = null;
 
-    for (let retry = 0; retry < maxRetries; retry++) {
+    for (let retry = 0; retry < 2; retry++) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/analyze/status/${jobId}`, {
           method: 'GET',
@@ -161,39 +188,35 @@ export class ImageAnalysisService {
         });
 
         if (!response.ok) {
-          // 4xx 클라이언트 오류는 재시도 불필요
           if (response.status >= 400 && response.status < 500) {
             throw new Error(`상태 확인 실패: ${response.status}`);
           }
-          // 5xx 서버 오류는 재시도
           throw new Error(`서버 오류: ${response.status}`);
         }
 
         return await response.json();
       } catch (err) {
         lastError = err;
-        // 클라이언트 오류(4xx)는 재시도하지 않음
         if (err.message.includes('상태 확인 실패')) throw err;
 
-        if (retry < maxRetries - 1) {
-          const backoff = Math.pow(2, retry) * 1000; // 1s, 2s
-          console.warn(`🔄 상태 확인 재시도 ${retry + 1}/${maxRetries} (${backoff}ms 후):`, err.message);
-          await this.sleep(backoff);
+        if (retry < 1) {
+          console.warn(`🔄 상태 확인 재시도 (1초 후):`, err.message);
+          await this.sleep(1000);
         }
       }
     }
 
-    throw new Error(`상태 확인 ${maxRetries}회 실패: ${lastError?.message || '알 수 없는 오류'}`);
+    throw new Error(`상태 확인 실패: ${lastError?.message || '알 수 없는 오류'}`);
   }
 
   // 완료까지 대기 (폴링)
-  async waitForCompletion(jobId, accessKey, maxAttempts = 60, onProgress = null) {
+  async waitForCompletion(jobId, accessKey, maxAttempts = 30, onProgress = null) {
     let consecutiveErrors = 0;
-    const maxConsecutiveErrors = 5;
+    const maxConsecutiveErrors = 3;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // 첫 폴링은 짧게, 이후 점진적으로 늘림
-      const delay = attempt === 0 ? 300 : attempt < 5 ? 800 : 1500;
+      // 첫 폴링은 짧게, 이후 균일하게 1초
+      const delay = attempt === 0 ? 300 : 1000;
       await this.sleep(delay);
 
       try {
@@ -238,7 +261,7 @@ export class ImageAnalysisService {
     const job = await this.analyzeImage(imageData, subject);
 
     // 2. 완료 대기
-    const result = await this.waitForCompletion(job.jobId, job.accessKey, 60, onProgress);
+    const result = await this.waitForCompletion(job.jobId, job.accessKey, 30, onProgress);
 
     // 3. 결과 파싱
     console.log('📥 API 응답 원본:', result);

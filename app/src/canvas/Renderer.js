@@ -23,18 +23,31 @@ export const Renderer = {
   _bgImage: null,
   _bgImageList: null,
 
+  // 성능 캐시
+  _fontCache: new Map(),
+  _lastFont: null,
+  _colorCache: new Map(),
+  _gradientCache: new Map(),
+
   init(ctx, width, height) {
     this.ctx = ctx;
     this.width = width;
     this.height = height;
     this._gridCache = null;
-    // 재입장 시 초기화 (기본값으로 복원)
-    safeSetItem('bg_image', '');
-    safeSetItem('ui_opacity', '1');
-    safeSetItem('bg_theme', 'default');
-    this._bgImage = null;
-    this._uiOpacity = 1.0;
-    this._bgTheme = BG_THEMES[0];
+    // 저장된 사용자 설정 복원 (구매한 테마/투명도 유지)
+    this._loadBgTheme();
+    this._loadUiOpacity();
+    const savedBgImage = safeGetItem('bg_image');
+    if (savedBgImage) {
+      this._loadBgImage(savedBgImage);
+    } else {
+      this._bgImage = null;
+    }
+    // 성능 캐시 초기화
+    this._fontCache.clear();
+    this._lastFont = null;
+    this._colorCache.clear();
+    this._gradientCache.clear();
   },
 
   _loadUiOpacity() {
@@ -72,6 +85,16 @@ export const Renderer = {
     this._bgTheme = picked;
     this._gridCache = null;
     // 색상 테마로 변경 시 이미지 배경 해제
+    this._bgImage = null;
+    safeSetItem('bg_image', '');
+  },
+
+  setBgTheme(themeId) {
+    const theme = BG_THEMES.find(t => t.id === themeId);
+    if (!theme) return;
+    safeSetItem('bg_theme', theme.id);
+    this._bgTheme = theme;
+    this._gridCache = null;
     this._bgImage = null;
     safeSetItem('bg_image', '');
   },
@@ -190,11 +213,16 @@ export const Renderer = {
     if (barWidth > 2) {
       const safeRadius = Math.min(radius, barWidth / 2);
 
-      // 그라데이션 생성
-      const gradient = this.ctx.createLinearGradient(x, y, x, y + h);
-      gradient.addColorStop(0, this.lightenColor(color, 30));
-      gradient.addColorStop(0.5, color);
-      gradient.addColorStop(1, this.darkenColor(color, 20));
+      // 그라데이션 캐시: 위치+높이+색상이 같으면 재사용
+      const gKey = `HP_${x}_${y}_${h}_${color}`;
+      let gradient = this._gradientCache.get(gKey);
+      if (!gradient) {
+        gradient = this.ctx.createLinearGradient(x, y, x, y + h);
+        gradient.addColorStop(0, this.lightenColor(color, 30));
+        gradient.addColorStop(0.5, color);
+        gradient.addColorStop(1, this.darkenColor(color, 20));
+        this._gradientCache.set(gKey, gradient);
+      }
 
       this.roundRect(x, y, barWidth, h, safeRadius, gradient);
 
@@ -235,36 +263,51 @@ export const Renderer = {
     if (barWidth > 2) {
       const safeRadius = Math.min(radius, barWidth / 2);
 
-      // 그라데이션
-      const gradient = this.ctx.createLinearGradient(x, y, x, y + h);
-      gradient.addColorStop(0, this.lightenColor(color, 20));
-      gradient.addColorStop(1, this.darkenColor(color, 10));
+      // 그라데이션 캐시: 타이머바 위치+높이+색상이 같으면 재사용
+      const gKey = `TM_${x}_${y}_${h}_${color}`;
+      let gradient = this._gradientCache.get(gKey);
+      if (!gradient) {
+        gradient = this.ctx.createLinearGradient(x, y, x, y + h);
+        gradient.addColorStop(0, this.lightenColor(color, 20));
+        gradient.addColorStop(1, this.darkenColor(color, 10));
+        this._gradientCache.set(gKey, gradient);
+      }
 
       this.roundRect(x, y, barWidth, h, safeRadius, gradient);
     }
   },
 
-  // 색상 밝게
+  // 색상 밝게 (캐시 적용)
   lightenColor(color, percent) {
+    const key = `${color}_L${percent}`;
+    let result = this._colorCache.get(key);
+    if (result) return result;
     const num = parseInt(color.replace('#', ''), 16);
     const amt = Math.round(2.55 * percent);
     const R = Math.min(255, (num >> 16) + amt);
     const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
     const B = Math.min(255, (num & 0x0000FF) + amt);
-    return `rgb(${R},${G},${B})`;
+    result = `rgb(${R},${G},${B})`;
+    this._colorCache.set(key, result);
+    return result;
   },
 
-  // 색상 어둡게
+  // 색상 어둡게 (캐시 적용)
   darkenColor(color, percent) {
+    const key = `${color}_D${percent}`;
+    let result = this._colorCache.get(key);
+    if (result) return result;
     const num = parseInt(color.replace('#', ''), 16);
     const amt = Math.round(2.55 * percent);
     const R = Math.max(0, (num >> 16) - amt);
     const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
     const B = Math.max(0, (num & 0x0000FF) - amt);
-    return `rgb(${R},${G},${B})`;
+    result = `rgb(${R},${G},${B})`;
+    this._colorCache.set(key, result);
+    return result;
   },
 
-  // 텍스트 (오답등록 버튼과 동일한 폰트)
+  // 텍스트 (오답등록 버튼과 동일한 폰트, 캐시 적용)
   drawText(text, x, y, options = {}) {
     const {
       font = '14px',
@@ -274,13 +317,20 @@ export const Renderer = {
       stroke = false
     } = options;
 
-    // font에서 weight와 size 추출
-    const match = font.match(/(bold\s+)?(\d+)px/i);
-    const weight = match && match[1] ? 'bold ' : '';
-    const size = match ? match[2] : '14';
-
-    // 오답등록 버튼과 동일한 폰트
-    this.ctx.font = `${weight}${size}px Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+    // 폰트 문자열 캐시: 정규식 파싱 결과를 Map에 저장
+    let resolved = this._fontCache.get(font);
+    if (!resolved) {
+      const match = font.match(/(bold\s+)?(\d+)px/i);
+      const weight = match && match[1] ? 'bold ' : '';
+      const size = match ? match[2] : '14';
+      resolved = `${weight}${size}px Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      this._fontCache.set(font, resolved);
+    }
+    // ctx.font 할당 스킵: 이전 프레임과 동일하면 생략
+    if (this._lastFont !== resolved) {
+      this.ctx.font = resolved;
+      this._lastFont = resolved;
+    }
     this.ctx.textAlign = align;
     this.ctx.textBaseline = baseline;
 

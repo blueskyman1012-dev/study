@@ -51,8 +51,22 @@ export class BattleManager {
     const monster = game.currentMonster;
     const run = game.currentRun;
 
+    game.lastTime = 0; // 타이머 즉시 정지 (async 중 시간초과 방지)
+
     run.correctAnswers++;
     run.totalAnswers++;
+
+    // 과목별 정답 카운트
+    const correctSubject = monster?.subject || game.currentSubject || 'math';
+    if (!run.correctBySubject) run.correctBySubject = {};
+    run.correctBySubject[correctSubject] = (run.correctBySubject[correctSubject] || 0) + 1;
+
+    // 유형(topic)별 정답 카운트
+    const correctTopic = monster?.topic || '';
+    if (correctTopic) {
+      if (!run.correctByTopic) run.correctByTopic = {};
+      run.correctByTopic[correctTopic] = (run.correctByTopic[correctTopic] || 0) + 1;
+    }
 
     game.combo++;
     if (game.combo > run.bestCombo) {
@@ -63,13 +77,13 @@ export class BattleManager {
       SoundService.playCombo(game.combo);
       this.effects.addComboText(game.combo);
       if (game.combo >= 5) {
-        this.effects.addParticleExplosion(200, 350, '#fbbf24', game.combo * 2);
+        this.effects.addParticleExplosion(200, 350, '#fbbf24', game.combo * 2, true);
       }
     } else {
       SoundService.playCorrectWithVibrate();
     }
 
-    this.effects.flashScreen('#22c55e', 0.15);
+    this.effects.flashScreen(this.effects.getCorrectFlashColor(), 0.15);
 
     const baseDamage = game.playerManager.getTotalDamage();
     const damage = baseDamage + game.combo * 2;
@@ -180,6 +194,10 @@ export class BattleManager {
     const monster = this.game.currentMonster;
     if (!monster || !monster.choices) return;
     const answer = monster.answer;
+    // 정답이 선택지에 없으면 첫 번째 선택지를 교체
+    if (answer && !monster.choices.includes(answer)) {
+      monster.choices[0] = answer;
+    }
     monster.choices = this.monsterManager.shuffleArray([...monster.choices]);
     monster.correctIndex = monster.choices.indexOf(answer);
   }
@@ -189,8 +207,27 @@ export class BattleManager {
     const monster = game.currentMonster;
     const run = game.currentRun;
 
+    game.lastTime = 0; // 타이머 즉시 정지
+
     run.totalAnswers++;
     game.combo = 0;
+
+    // 과목별 오답 카운트
+    const wrongSubject = monster?.subject || game.currentSubject || 'math';
+    if (!run.wrongBySubject) run.wrongBySubject = {};
+    run.wrongBySubject[wrongSubject] = (run.wrongBySubject[wrongSubject] || 0) + 1;
+
+    // 유형(topic)별 오답 카운트
+    const wrongTopic = monster?.topic || '';
+    if (wrongTopic) {
+      if (!run.wrongByTopic) run.wrongByTopic = {};
+      run.wrongByTopic[wrongTopic] = (run.wrongByTopic[wrongTopic] || 0) + 1;
+    }
+
+    // 난이도별 오답 카운트
+    const wrongDiff = String(monster?.difficulty || 2);
+    if (!run.wrongByDifficulty) run.wrongByDifficulty = {};
+    run.wrongByDifficulty[wrongDiff] = (run.wrongByDifficulty[wrongDiff] || 0) + 1;
 
     if (!monster._wrongCounts) monster._wrongCounts = {};
     const qKey = monster.question || '_default';
@@ -235,6 +272,7 @@ export class BattleManager {
 
     if (this.player.currentHp <= 0 && this.player.inventory?.reviveTicket > 0) {
       this.player.inventory.reviveTicket--;
+      if (run) run.reviveCount = (run.reviveCount || 0) + 1;
       this.player.currentHp = Math.round(this.player.maxHp * 0.5);
       game.playerManager.save();
       await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
@@ -262,11 +300,14 @@ export class BattleManager {
 
   async onTimeOut() {
     const game = this.game;
+    game.lastTime = 0; // 타이머 즉시 정지 (중복 호출 방지)
     game.combo = 0;
+    if (game.currentRun) game.currentRun.timeoutCount = (game.currentRun.timeoutCount || 0) + 1;
     this.player.currentHp -= 45;
 
     if (this.player.currentHp <= 0 && this.player.inventory?.reviveTicket > 0) {
       this.player.inventory.reviveTicket--;
+      if (game.currentRun) game.currentRun.reviveCount = (game.currentRun.reviveCount || 0) + 1;
       this.player.currentHp = Math.round(this.player.maxHp * 0.5);
       game.playerManager.save();
       await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
@@ -293,17 +334,17 @@ export class BattleManager {
     SoundService.playMonsterDefeat();
     const bossType = monster.bossType;
     if (bossType === 'FINAL_BOSS') {
-      this.effects.addParticleExplosion(200, 300, '#ff0000', 30);
-      this.effects.addParticleExplosion(200, 300, '#ffd700', 20);
+      this.effects.addParticleExplosion(200, 300, '#ff0000', 30, true);
+      this.effects.addParticleExplosion(200, 300, '#ffd700', 20, true);
       this.effects.shakeScreen(20);
     } else if (bossType === 'MID_BOSS') {
-      this.effects.addParticleExplosion(200, 300, '#9932cc', 25);
+      this.effects.addParticleExplosion(200, 300, '#9932cc', 25, true);
       this.effects.shakeScreen(15);
     } else if (bossType === 'NORMAL_BOSS') {
-      this.effects.addParticleExplosion(200, 300, '#ff6b35', 20);
+      this.effects.addParticleExplosion(200, 300, '#ff6b35', 20, true);
       this.effects.shakeScreen(10);
     } else {
-      this.effects.addParticleExplosion(200, 300, '#6366f1', 12);
+      this.effects.addParticleExplosion(200, 300, '#6366f1', 12, true);
     }
     this.effects.flashScreen('#ffffff', 0.3);
 
@@ -331,12 +372,16 @@ export class BattleManager {
 
   async skipQuestion() {
     const game = this.game;
+    game.lastTime = 0; // 타이머 즉시 정지
     game.combo = 0;
-    this.player.currentHp -= 10;
+    game.currentRun.skipCount++;
+    const skipPenalty = 10 + (game.currentRun.skipCount - 1) * 5;
+    this.player.currentHp -= skipPenalty;
 
     if (this.player.currentHp <= 0) {
       if (this.player.inventory?.reviveTicket > 0) {
         this.player.inventory.reviveTicket--;
+        if (game.currentRun) game.currentRun.reviveCount = (game.currentRun.reviveCount || 0) + 1;
         this.player.currentHp = Math.round(this.player.maxHp * 0.5);
         game.playerManager.save();
         await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
@@ -360,6 +405,7 @@ export class BattleManager {
 
     if (this.player.inventory?.hintTicket > 0) {
       this.player.inventory.hintTicket--;
+      if (game.currentRun) game.currentRun.hintCount = (game.currentRun.hintCount || 0) + 1;
       game.playerManager.save();
       await this._showHintInfo(monster);
       return;
@@ -374,6 +420,7 @@ export class BattleManager {
     if (!useGold) return;
 
     this.player.gold -= 50;
+    if (game.currentRun) game.currentRun.hintCount = (game.currentRun.hintCount || 0) + 1;
     game.playerManager.save();
     await this._showHintInfo(monster);
   }
@@ -413,6 +460,7 @@ export class BattleManager {
   async useTimeBoost() {
     if (this.player.inventory?.timeBoost > 0) {
       this.player.inventory.timeBoost--;
+      if (this.game.currentRun) this.game.currentRun.timeBoostCount = (this.game.currentRun.timeBoostCount || 0) + 1;
       this.game.timer += 60;
       this.game.playerManager.save();
       SoundService.playClick();

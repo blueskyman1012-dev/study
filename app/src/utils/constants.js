@@ -116,7 +116,7 @@ export const UPGRADES = {
     basePrice: 500,
     priceIncrease: 300,  // 단계당 가격 증가
     maxLevel: 10,
-    value: 15
+    value: 10
   },
   time: {
     nameKey: 'timeUpgrade',
@@ -133,8 +133,11 @@ export const UPGRADES = {
     descKey: 'goldBonusDesc',
     basePrice: 1000,
     priceIncrease: 800,
-    maxLevel: 5,
-    value: 15
+    maxLevel: 30,
+    value: 5,
+    priceAccelStart: 10,
+    priceAccelInterval: 5,
+    priceAccelStep: 0.05
   },
   damage: {
     nameKey: 'damageUpgrade',
@@ -143,7 +146,7 @@ export const UPGRADES = {
     basePrice: 900,
     priceIncrease: 1000,
     maxLevel: 10,
-    value: 10
+    value: 5
   }
 };
 
@@ -188,6 +191,50 @@ export const SHOP_ITEMS = {
     descKey: 'randomBgDesc',
     price: 1
   },
+};
+
+// 꾸미기 아이템 정의
+export const COSMETIC_ITEMS = {
+  theme: {
+    nameKey: 'cosmetic_themes',
+    icon: '🎨',
+    items: [
+      { id: 'emerald', nameKey: 'theme_emerald', price: 100, color: '#34d399' },
+      { id: 'crimson', nameKey: 'theme_crimson', price: 100, color: '#f87171' },
+      { id: 'amber', nameKey: 'theme_amber', price: 100, color: '#fbbf24' },
+      { id: 'violet', nameKey: 'theme_violet', price: 100, color: '#a78bfa' },
+      { id: 'cyan', nameKey: 'theme_cyan', price: 100, color: '#22d3ee' },
+      { id: 'rose', nameKey: 'theme_rose', price: 100, color: '#fb7185' },
+    ]
+  },
+  particle: {
+    nameKey: 'cosmetic_particle',
+    icon: '✨',
+    items: [
+      { id: 'default', nameKey: 'cosmetic_particle_default', price: 0 },
+      { id: 'gold', nameKey: 'cosmetic_particle_gold', price: 200, colors: ['#fbbf24', '#f59e0b', '#d97706', '#fcd34d'] },
+      { id: 'rainbow', nameKey: 'cosmetic_particle_rainbow', price: 300, colors: ['#ef4444', '#f97316', '#fbbf24', '#22c55e', '#3b82f6', '#8b5cf6'] },
+      { id: 'sakura', nameKey: 'cosmetic_particle_sakura', price: 300, colors: ['#fda4af', '#fb7185', '#f472b6', '#fecdd3'] },
+    ]
+  },
+  damageText: {
+    nameKey: 'cosmetic_damageText',
+    icon: '💥',
+    items: [
+      { id: 'default', nameKey: 'cosmetic_dmg_default', price: 0 },
+      { id: 'neon', nameKey: 'cosmetic_dmg_neon', price: 150, color: '#00ffff', glow: true },
+      { id: 'pixel', nameKey: 'cosmetic_dmg_pixel', price: 150, fontScale: 1.4 },
+    ]
+  },
+  correctFlash: {
+    nameKey: 'cosmetic_flash',
+    icon: '⚡',
+    items: [
+      { id: 'default', nameKey: 'cosmetic_flash_default', price: 0, color: '#22c55e' },
+      { id: 'blue', nameKey: 'cosmetic_flash_blue', price: 100, color: '#3b82f6' },
+      { id: 'purple', nameKey: 'cosmetic_flash_purple', price: 100, color: '#a855f7' },
+    ]
+  }
 };
 
 // 업적 정의

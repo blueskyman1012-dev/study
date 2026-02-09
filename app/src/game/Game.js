@@ -68,6 +68,9 @@ export class Game {
     this.generatingMessage = '';
     this.generatingSubMessage = '';
 
+    // 렌더링 최적화: dirty 플래그
+    this._needsRender = true;
+
   }
 
   async init() {
@@ -75,6 +78,7 @@ export class Game {
     await this.monsterManager.loadMonsters();
     geminiService.loadApiKey();
     this.achievementManager.initDailyMissions();
+    this.effects.setCosmetics(this.playerManager.player.cosmetics);
     console.log('🎮 Game initialized');
 
     // 신규 유저 가이드 자동 표시
@@ -84,12 +88,18 @@ export class Game {
     }
   }
 
+  // 렌더 요청 (dirty 플래그 설정)
+  requestRender() {
+    this._needsRender = true;
+  }
+
   // 화면 전환
   changeScreen(screen) {
     this.currentScreen = screen;
     this.clearClickAreas();
     this.scrollY = 0;
     this.scrollMaxY = 0;
+    this._needsRender = true;
 
     // 메인 화면이 아니면 HTML 오답등록 버튼 즉시 숨기기
     const regBtn = document.getElementById('register-btn');
@@ -142,9 +152,16 @@ export class Game {
 
   // 업데이트
   update() {
+    const hadEffects = this.effects.hasActiveEffects();
     this.effects.update();
+
     if (this.currentScreen === SCREENS.BATTLE) {
       this.battleManager.updateBattle();
+      this._needsRender = true;
+    } else if (this.isGenerating) {
+      this._needsRender = true;
+    } else if (hadEffects || this.effects.hasActiveEffects()) {
+      this._needsRender = true;
     }
   }
 
@@ -193,64 +210,29 @@ export class Game {
       case SCREENS.BATTLE: renderBattleScreen(this); break;
       case SCREENS.RESULT: renderResultScreen(this); break;
       case SCREENS.SETTINGS:
-        ctx.save();
-        ctx.translate(0, -this.scrollY);
-        renderSettingsScreen(this);
-        ctx.restore();
-        // 헤더를 스크롤 위에 고정 렌더링
-        Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
-        Renderer.drawText(t('settingsTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
-        Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
-        // 스크롤 인디케이터
-        if (this.scrollMaxY > 0) {
-          const barH = Math.max(30, 700 * (700 / (700 + this.scrollMaxY)));
-          const barY = (this.scrollY / this.scrollMaxY) * (700 - barH);
-          Renderer.roundRect(394, barY, 4, barH, 2, 'rgba(255,255,255,0.2)');
-        }
+        this._renderScrollableScreen(() => renderSettingsScreen(this), () => {
+          Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
+          Renderer.drawText(t('settingsTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
+          Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
+        });
         break;
       case SCREENS.DUNGEON_SELECT: renderDungeonSelectScreen(this); break;
       case SCREENS.SHOP:
-        ctx.save();
-        ctx.translate(0, -this.scrollY);
-        renderShopScreen(this);
-        ctx.restore();
-        // 고정 헤더 + 탭 바 (86px)
-        renderShopFixedHeader(this);
-        if (this.scrollMaxY > 0) {
-          const barH = Math.max(30, 700 * (700 / (700 + this.scrollMaxY)));
-          const barY = (this.scrollY / this.scrollMaxY) * (700 - barH);
-          Renderer.roundRect(394, barY, 4, barH, 2, 'rgba(255,255,255,0.2)');
-        }
+        this._renderScrollableScreen(() => renderShopScreen(this), () => renderShopFixedHeader(this));
         break;
       case SCREENS.STATS:
-        ctx.save();
-        ctx.translate(0, -this.scrollY);
-        renderStatsScreen(this);
-        ctx.restore();
-        // 고정 헤더
-        Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
-        Renderer.drawText(t('statsTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
-        Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
-        // 스크롤 인디케이터
-        if (this.scrollMaxY > 0) {
-          const barH = Math.max(30, 700 * (700 / (700 + this.scrollMaxY)));
-          const barY = (this.scrollY / this.scrollMaxY) * (700 - barH);
-          Renderer.roundRect(394, barY, 4, barH, 2, 'rgba(255,255,255,0.2)');
-        }
+        this._renderScrollableScreen(() => renderStatsScreen(this), () => {
+          Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
+          Renderer.drawText(t('statsTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
+          Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
+        });
         break;
       case SCREENS.ACHIEVEMENT:
-        ctx.save();
-        ctx.translate(0, -this.scrollY);
-        renderAchievementScreen(this);
-        ctx.restore();
-        Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
-        Renderer.drawText(t('achievementTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
-        Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
-        if (this.scrollMaxY > 0) {
-          const barH = Math.max(30, 700 * (700 / (700 + this.scrollMaxY)));
-          const barY = (this.scrollY / this.scrollMaxY) * (700 - barH);
-          Renderer.roundRect(394, barY, 4, barH, 2, 'rgba(255,255,255,0.2)');
-        }
+        this._renderScrollableScreen(() => renderAchievementScreen(this), () => {
+          Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
+          Renderer.drawText(t('achievementTitle'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });
+          Renderer.drawText(t('back'), 30, 22, { font: '14px system-ui', color: COLORS.ACCENT_LIGHT });
+        });
         break;
     }
 
@@ -264,6 +246,23 @@ export class Game {
     }
 
     ctx.restore();
+  }
+
+  // 스크롤 가능 화면 공통 렌더 헬퍼 (save/restore + 고정헤더 + 스크롤바)
+  _renderScrollableScreen(renderFn, headerFn) {
+    const ctx = Renderer.ctx;
+    ctx.save();
+    ctx.translate(0, -this.scrollY);
+    renderFn();
+    ctx.restore();
+    // 고정 헤더 재렌더
+    if (headerFn) headerFn();
+    // 스크롤 인디케이터
+    if (this.scrollMaxY > 0) {
+      const barH = Math.max(30, 700 * (700 / (700 + this.scrollMaxY)));
+      const barY = (this.scrollY / this.scrollMaxY) * (700 - barH);
+      Renderer.roundRect(394, barY, 4, barH, 2, 'rgba(255,255,255,0.2)');
+    }
   }
 
   // 가이드 관리 (위임)
@@ -331,7 +330,11 @@ export class Game {
     this.currentRun = {
       startTime: Date.now(), defeatedMonsters: [], earnedGold: 0, earnedExp: 0,
       bestCombo: 0, goldMultiplier: runGoldMultiplier, result: 'ongoing',
-      correctAnswers: 0, totalAnswers: 0
+      correctAnswers: 0, totalAnswers: 0, skipCount: 0,
+      hintCount: 0, timeBoostCount: 0, reviveCount: 0, timeoutCount: 0,
+      wrongBySubject: {}, correctBySubject: {},
+      wrongByTopic: {}, correctByTopic: {},
+      wrongByDifficulty: {}
     };
 
     this.stage = 1;
@@ -352,6 +355,7 @@ export class Game {
     this.playerManager.resetHp();
     await this.playerManager.save();
     await this.db.add('runs', this.currentRun);
+    this.statsManager.invalidateCache();
     if (apiService.isLoggedIn()) {
       apiService.postRun(this.currentRun).catch(() => {});
     }
@@ -385,6 +389,8 @@ export class Game {
   set previewImg(v) { this.registerManager.previewImg = v; }
   get previewImageLoaded() { return this.registerManager.previewImageLoaded; }
   set previewImageLoaded(v) { this.registerManager.previewImageLoaded = v; }
+  get _previewImageLoading() { return this.registerManager._previewImageLoading; }
+  set _previewImageLoading(v) { this.registerManager._previewImageLoading = v; }
   startRegister() { return this.registerManager.startRegister(); }
   completeRegister(subjectId) { return this.registerManager.completeRegister(subjectId); }
 
