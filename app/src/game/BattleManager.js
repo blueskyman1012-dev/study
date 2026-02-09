@@ -232,34 +232,32 @@ export class BattleManager {
     const qKey = monster.question || '_default';
     monster._wrongCounts[qKey] = (monster._wrongCounts[qKey] || 0) + 1;
 
-    if (monster._wrongCounts[qKey] >= 2 && monster._healCount < 3) {
-      monster._healCount++;
-      monster.hp = monster.maxHp;
-      this.effects.floatingTexts.push({
-        x: 200, y: 250,
-        text: t('monsterHpRecover'),
-        color: '#ef4444',
-        fontSize: 18,
-        speed: 1.5,
-        life: 1200,
-        maxLife: 1200,
-        alpha: 1,
-        scale: 1
-      });
-    }
-
     let damage = 25;
     const bossType = monster?.bossType;
     if (bossType === 'NORMAL_BOSS') {
       damage = 30;
     } else if (bossType === 'MID_BOSS') {
       damage = 40;
-      monster.hp = Math.min(monster.hp + 30, monster.maxHp);
+      if (monster._healCount < 5) {
+        monster._healCount++;
+        monster.hp = Math.min(monster.hp + 30, monster.maxHp);
+        this.effects.floatingTexts.push({
+          x: 200, y: 250, text: t('monsterHpRecover'), color: '#ef4444',
+          fontSize: 18, speed: 1.5, life: 1200, maxLife: 1200, alpha: 1, scale: 1
+        });
+      }
     } else if (bossType === 'FINAL_BOSS') {
       damage = 60;
       if (game.finalBossWrongLastTurn) {
         this.player.currentHp -= 5;
-        monster.hp = Math.min(monster.hp + 15, monster.maxHp);
+        if (monster._healCount < 10) {
+          monster._healCount++;
+          monster.hp = Math.min(monster.hp + 15, monster.maxHp);
+          this.effects.floatingTexts.push({
+            x: 200, y: 250, text: t('monsterHpRecover'), color: '#ef4444',
+            fontSize: 18, speed: 1.5, life: 1200, maxLife: 1200, alpha: 1, scale: 1
+          });
+        }
       }
       game.finalBossWrongLastTurn = true;
     }
