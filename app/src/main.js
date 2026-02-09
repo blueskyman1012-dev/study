@@ -515,38 +515,8 @@ class App {
       }
     }, { passive: false });
 
-    // ESC/Backspace 뒤로가기 (캡처 단계에서 최우선 처리)
-    const handleBack = () => {
-      // 레벨진척도 모달 닫기
-      const levelModal = document.getElementById('level-modal');
-      if (levelModal) { levelModal.remove(); return; }
-      // 일반 모달 닫기
-      const customModal = document.getElementById('custom-modal');
-      if (customModal) { customModal.click(); return; }
-      // 서브 화면 → 메인 화면 (전투/결과 제외)
-      const screen = this.game.currentScreen;
-      if (screen !== SCREENS.MAIN && screen !== SCREENS.BATTLE && screen !== SCREENS.RESULT) {
-        this.game.changeScreen(SCREENS.MAIN);
-        this.game.render();
-      }
-    };
-
-    window.addEventListener('keydown', (e) => {
-      // ESC 처리 (keyCode 27 호환)
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleBack();
-        return;
-      }
-      // Backspace 뒤로가기 (입력 필드 제외)
-      if ((e.key === 'Backspace' || e.keyCode === 8) &&
-          !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
-        e.preventDefault();
-        handleBack();
-        return;
-      }
-      // 방향키 스크롤
+    // 방향키 스크롤
+    document.addEventListener('keydown', (e) => {
       if (this.game.scrollMaxY > 0) {
         const step = 40;
         if (e.key === 'ArrowDown') {
@@ -559,7 +529,7 @@ class App {
           this.game.render();
         }
       }
-    }, true);  // true = 캡처 단계 (다른 핸들러보다 먼저 실행)
+    });
 
     // Android 뒤로가기 (popstate)
     history.pushState(null, '', location.href);
@@ -662,6 +632,31 @@ class App {
 
 // 앱 시작 (폰트 로드 후)
 const app = new App();
+
+// ESC/Backspace 뒤로가기 — 모듈 최상위 글로벌 핸들러
+window.onkeydown = function(e) {
+  if (!app.game) return;
+  const isEsc = e.key === 'Escape' || e.keyCode === 27;
+  const isBack = e.key === 'Backspace' || e.keyCode === 8;
+  if (!isEsc && !isBack) return;
+  if (isBack && ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+  e.preventDefault();
+
+  // 모달 닫기
+  const levelModal = document.getElementById('level-modal');
+  if (levelModal) { levelModal.remove(); return; }
+  const customModal = document.getElementById('custom-modal');
+  if (customModal) { customModal.click(); return; }
+
+  // 서브 화면 → 메인 (전투/결과 제외)
+  const screen = app.game.currentScreen;
+  if (screen !== SCREENS.MAIN && screen !== SCREENS.BATTLE && screen !== SCREENS.RESULT) {
+    app.game.changeScreen(SCREENS.MAIN);
+    app.game._needsRender = true;
+  }
+};
+
 window.addEventListener('DOMContentLoaded', async () => {
   applyToHTML();
   await document.fonts.ready;
