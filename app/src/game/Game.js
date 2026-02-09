@@ -391,9 +391,8 @@ export class Game {
 
     this.achievementManager.onRunEnd(this.currentRun);
 
-    if (isWin) {
-      await this._reviveClearedMonsters();
-    }
+    // 승패 무관하게 cleared 몬스터 부활 (풀 고갈 방지)
+    await this._reviveClearedMonsters();
 
     this.changeScreen(SCREENS.RESULT);
   }

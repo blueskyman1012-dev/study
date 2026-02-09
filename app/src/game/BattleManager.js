@@ -51,7 +51,7 @@ export class BattleManager {
     const monster = game.currentMonster;
     const run = game.currentRun;
 
-    game.lastTime = 0; // 타이머 즉시 정지 (async 중 시간초과 방지)
+    game.lastTime = -1; // 타이머 정지 (updateBattle에서 lastTime > 0 체크)
 
     run.correctAnswers++;
     run.totalAnswers++;
@@ -98,7 +98,8 @@ export class BattleManager {
     const goldBonusMultiplier = 1 + (goldBonusUpgrade * UPGRADES.goldBonus.value / 100);
     const monsterGoldMultiplier = monster.goldMultiplier || 1;
     const runGoldMultiplier = run?.goldMultiplier || 1;
-    const multipliedGold = Math.round(baseGold * goldBonusMultiplier * monsterGoldMultiplier * runGoldMultiplier);
+    const earlyBonus = (this.player.level <= 10) ? 1.5 : 1;  // 초반 골드 1.5배
+    const multipliedGold = Math.round(baseGold * goldBonusMultiplier * monsterGoldMultiplier * runGoldMultiplier * earlyBonus);
     const comboBonus = Math.min(game.combo, 10) * 2;
     const gold = multipliedGold + comboBonus;
     this.player.gold += gold;
@@ -182,12 +183,8 @@ export class BattleManager {
     monster.correctIndex = safeQ.correctIndex || 0;
     monster.explanation = safeQ.explanation || '';
 
-    if (!monster.choices || monster.choices.length === 0) {
-      const wrongAnswers = this.monsterManager.generateWrongAnswers(monster.answer);
-      monster.choices = [monster.answer, ...wrongAnswers];
-    }
-
-    this.reshuffleChoices();
+    // _prepareChoices: 부등식 답 변환 + 선택지 생성 + 셔플
+    this.monsterManager._prepareChoices(monster);
   }
 
   reshuffleChoices() {
@@ -207,7 +204,7 @@ export class BattleManager {
     const monster = game.currentMonster;
     const run = game.currentRun;
 
-    game.lastTime = 0; // 타이머 즉시 정지
+    game.lastTime = -1; // 타이머 정지
 
     run.totalAnswers++;
     game.combo = 0;
@@ -256,10 +253,10 @@ export class BattleManager {
       damage = 40;
       monster.hp = Math.min(monster.hp + 30, monster.maxHp);
     } else if (bossType === 'FINAL_BOSS') {
-      damage = 80;
+      damage = 60;
       if (game.finalBossWrongLastTurn) {
-        this.player.currentHp -= 10;
-        monster.hp = Math.min(monster.hp + 25, monster.maxHp);
+        this.player.currentHp -= 5;
+        monster.hp = Math.min(monster.hp + 15, monster.maxHp);
       }
       game.finalBossWrongLastTurn = true;
     }
@@ -300,7 +297,7 @@ export class BattleManager {
 
   async onTimeOut() {
     const game = this.game;
-    game.lastTime = 0; // 타이머 즉시 정지 (중복 호출 방지)
+    game.lastTime = -1; // 타이머 정지 (중복 호출 방지)
     game.combo = 0;
     if (game.currentRun) game.currentRun.timeoutCount = (game.currentRun.timeoutCount || 0) + 1;
     this.player.currentHp -= 45;
@@ -372,10 +369,10 @@ export class BattleManager {
 
   async skipQuestion() {
     const game = this.game;
-    game.lastTime = 0; // 타이머 즉시 정지
+    game.lastTime = -1; // 타이머 정지
     game.combo = 0;
     game.currentRun.skipCount++;
-    const skipPenalty = 10 + (game.currentRun.skipCount - 1) * 5;
+    const skipPenalty = Math.min(30, 10 + (game.currentRun.skipCount - 1) * 5);
     this.player.currentHp -= skipPenalty;
 
     if (this.player.currentHp <= 0) {

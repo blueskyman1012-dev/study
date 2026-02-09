@@ -183,6 +183,23 @@ export class MonsterManager {
       answer = monster.choices[idx];
     }
     if (!answer) answer = '?';
+
+    // 부등식 문제인데 답이 숫자만인 경우 → 부등식 표현으로 변환
+    const answerStr = String(answer).trim();
+    if (/^-?\d+\.?\d*$/.test(answerStr) && !/[<>≤≥]/.test(answerStr)) {
+      const question = monster.question || '';
+      const topic = (monster.topic || '').toLowerCase();
+      const isInequality = /부등식|inequality/i.test(topic) ||
+        (/[<>≤≥]/.test(question) && /[a-zA-Zx]/.test(question));
+      if (isInequality) {
+        const ops = question.match(/[≤≥]|[<>]=?/g);
+        if (ops && ops.length > 0) {
+          const op = ops[ops.length - 1];
+          answer = `x ${op} ${answerStr}`;
+          monster.choices = [];  // 기존 숫자 선택지 제거
+        }
+      }
+    }
     monster.answer = answer;
 
     if (!monster.choices || monster.choices.length === 0) {
@@ -194,6 +211,13 @@ export class MonsterManager {
 
     monster.choices = this.shuffleArray([...monster.choices]);
     monster.correctIndex = monster.choices.indexOf(answer);
+
+    // 최종 검증: 정답이 선택지에 없으면 강제 삽입
+    if (monster.correctIndex === -1) {
+      monster.choices[0] = answer;
+      monster.choices = this.shuffleArray([...monster.choices]);
+      monster.correctIndex = monster.choices.indexOf(answer);
+    }
   }
 
   // 오답 자동 생성

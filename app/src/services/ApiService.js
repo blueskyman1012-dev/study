@@ -43,14 +43,18 @@ export class ApiService {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const res = await fetch(`${API_URL}${path}`, {
         ...options,
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.sessionToken}`,
           ...options.headers
         }
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errorType = classifyError(res.status);
@@ -101,6 +105,15 @@ export class ApiService {
           permanentUpgrades: playerData.permanentUpgrades,
           inventory: playerData.inventory,
           stats: playerData.stats,
+          achievements: playerData.achievements,
+          dailyMissions: playerData.dailyMissions,
+          weeklyMissions: playerData.weeklyMissions,
+          cosmetics: playerData.cosmetics,
+          totalGoldEarned: playerData.totalGoldEarned,
+          totalCorrectAnswers: playerData.totalCorrectAnswers,
+          subjectCounts: playerData.subjectCounts,
+          achievementBonusDamage: playerData.achievementBonusDamage,
+          achievementBonusHp: playerData.achievementBonusHp,
           createdAt: playerData.createdAt
         }
       })
@@ -306,6 +319,15 @@ export class ApiService {
     player.permanentUpgrades = extra.permanentUpgrades || { hp: 0, time: 0, goldBonus: 0, damage: 0 };
     player.inventory = extra.inventory || { reviveTicket: 0, hintTicket: 0, timeBoost: 0, doubleGold: 0 };
     player.stats = extra.stats || { totalRuns: 0, totalKills: 0, bestCombo: 0 };
+    if (extra.achievements) player.achievements = extra.achievements;
+    if (extra.dailyMissions) player.dailyMissions = extra.dailyMissions;
+    if (extra.weeklyMissions) player.weeklyMissions = extra.weeklyMissions;
+    if (extra.cosmetics) player.cosmetics = extra.cosmetics;
+    if (extra.totalGoldEarned !== undefined) player.totalGoldEarned = extra.totalGoldEarned;
+    if (extra.totalCorrectAnswers !== undefined) player.totalCorrectAnswers = extra.totalCorrectAnswers;
+    if (extra.subjectCounts) player.subjectCounts = extra.subjectCounts;
+    if (extra.achievementBonusDamage !== undefined) player.achievementBonusDamage = extra.achievementBonusDamage;
+    if (extra.achievementBonusHp !== undefined) player.achievementBonusHp = extra.achievementBonusHp;
 
     await db.put('player', player);
     return player;
