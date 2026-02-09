@@ -227,16 +227,16 @@ function renderUpgradeTab(game, player, shopManager, startY, W, H) {
     ctx.restore();
 
     // 아이콘 (링 중앙)
-    Renderer.drawText(upgrade.icon, ringCX, ringCY - 12, { font: '20px system-ui', align: 'center' });
+    Renderer.drawText(upgrade.icon, ringCX, ringCY - 14, { font: '20px system-ui', align: 'center' });
 
     // 퍼센트/MAX (링 중앙 하단)
     if (isMaxed) {
-      Renderer.drawText('MAX', ringCX, ringCY + 8, {
-        font: 'bold 10px system-ui', color: '#22c55e', align: 'center'
+      Renderer.drawText('MAX', ringCX, ringCY + 6, {
+        font: 'bold 11px system-ui', color: '#22c55e', align: 'center'
       });
     } else {
-      Renderer.drawText(`${pct}%`, ringCX, ringCY + 8, {
-        font: 'bold 10px system-ui', color: theme.main, align: 'center'
+      Renderer.drawText(`${pct}%`, ringCX, ringCY + 6, {
+        font: 'bold 11px system-ui', color: theme.main, align: 'center'
       });
     }
 

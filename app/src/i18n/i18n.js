@@ -1304,6 +1304,9 @@ const translations = {
     'generating': '🤖 AI問題生成中...',
     'generatingDesc': '{0}個の問題を作成中',
     'pleaseWait': 'しばらくお待ちください...',
+    'autoFillGenerating': '🤖 問題を自動生成中...',
+    'autoFillDesc': '{0}個の問題を補充中',
+    'autoFillProgress': '{0}/{1}個生成完了',
 
     'monsterHpRecover': 'モンスターHP回復！',
     'reviveUsed': '🪶 復活券使用！HP 50%回復！\n（残り: {0}）',
@@ -1800,6 +1803,9 @@ const translations = {
     'generating': '🤖 AI题目生成中...',
     'generatingDesc': '正在创建{0}道题',
     'pleaseWait': '请稍候...',
+    'autoFillGenerating': '🤖 自动生成题目中...',
+    'autoFillDesc': '正在补充{0}道题',
+    'autoFillProgress': '已生成{0}/{1}道',
 
     'monsterHpRecover': '怪物HP恢复！',
     'reviveUsed': '🪶 使用复活券！HP恢复50%！\n（剩余: {0}）',

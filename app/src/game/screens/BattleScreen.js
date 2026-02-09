@@ -64,41 +64,43 @@ export function renderBattleScreen(game) {
     hpBarColor = '#ff4500';
   }
 
-  Renderer.roundRect(20, 100, 360, 180, 20, monsterBgColor);
+  Renderer.roundRect(20, 90, 360, 168, 20, monsterBgColor);
 
   if (bossType) {
     const pulseAlpha = 0.6 + Math.sin(effects.pulseTime / 200) * 0.4;
     const ctx = Renderer.ctx;
     ctx.save();
     ctx.globalAlpha = pulseAlpha;
-    Renderer.roundRect(20, 100, 360, 180, 20, null, hpBarColor);
+    Renderer.roundRect(20, 90, 360, 168, 20, null, hpBarColor);
     ctx.restore();
   }
 
   const breathScale = 1 + Math.sin(effects.pulseTime / 500) * 0.05;
-  const circleRadius = 45 * breathScale;
-  Renderer.drawCircle(200, 165, circleRadius, monsterCircleColor);
+  const circleRadius = 42 * breathScale;
+  Renderer.drawCircle(200, 152, circleRadius, monsterCircleColor);
 
   let displayIconSize = parseInt(iconSize);
   if (effects.bossEntrance > 0) {
     displayIconSize = displayIconSize * (1 + effects.bossEntrance * 0.5);
   }
 
-  Renderer.drawText(monsterIcon, 200, 145, { font: `${displayIconSize}px system-ui`, align: 'center' });
-  Renderer.drawText(monster.name || t('wrongMonster'), 200, 220, {
+  Renderer.drawText(monsterIcon, 200, 133, { font: `${displayIconSize}px system-ui`, align: 'center' });
+  Renderer.drawText(monster.name || t('wrongMonster'), 200, 205, {
     font: 'bold 16px system-ui', color: bossType === 'FINAL_BOSS' ? '#8b0000' : bossType === 'MID_BOSS' ? '#9932cc' : bossType ? '#ff0000' : COLORS.TEXT_PRIMARY, align: 'center'
   });
 
-  Renderer.drawHPBar(100, 245, 200, 12, monster.hp, monster.maxHp, hpBarColor);
-  Renderer.drawText(`HP ${Math.round(monster.hp)}/${monster.maxHp}`, 200, 262, {
+  Renderer.drawHPBar(100, 228, 200, 12, monster.hp, monster.maxHp, hpBarColor);
+  Renderer.drawText(`HP ${Math.round(monster.hp)}/${monster.maxHp}`, 200, 245, {
     font: '11px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
   });
 
   // 문제 카드
-  Renderer.roundRect(20, 300, 360, 140, 20, COLORS.BG_CARD);
-  Renderer.roundRect(20, 300, 360, 140, 20, null, COLORS.ACCENT);
-  Renderer.roundRect(160, 288, 80, 24, 12, COLORS.ACCENT);
-  Renderer.drawText('QUESTION', 200, 293, { font: 'bold 11px system-ui', align: 'center' });
+  const qCardY = 272;
+  const qCardH = 128;
+  Renderer.roundRect(20, qCardY, 360, qCardH, 20, COLORS.BG_CARD);
+  Renderer.roundRect(20, qCardY, 360, qCardH, 20, null, COLORS.ACCENT);
+  Renderer.roundRect(160, qCardY - 12, 80, 24, 12, COLORS.ACCENT);
+  Renderer.drawText('QUESTION', 200, qCardY - 7, { font: 'bold 11px system-ui', align: 'center' });
 
   const questionText = monster.question || t('loadingQuestion');
   const maxCharsPerLine = 22;
@@ -116,25 +118,26 @@ export function renderBattleScreen(game) {
   }
 
   const totalHeight = lines.length * lineHeight;
-  const startY = 360 - totalHeight / 2 + lineHeight / 2;
+  const qCenterY = qCardY + qCardH / 2;
+  const startY = qCenterY - totalHeight / 2 + lineHeight / 2;
 
   lines.forEach((line, i) => {
     Renderer.drawText(line, 200, startY + i * lineHeight, { font: `bold ${fontSize}px system-ui`, align: 'center' });
   });
 
   if (questionText.length > maxCharsPerLine * 2) {
-    Renderer.drawText(t('viewFull'), 355, 310, { font: '11px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
-    game.registerClickArea('viewQuestion', 320, 300, 70, 25, () => game.battleManager.showFullQuestion());
+    Renderer.drawText(t('viewFull'), 355, qCardY + 10, { font: '11px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
+    game.registerClickArea('viewQuestion', 320, qCardY, 70, 25, () => game.battleManager.showFullQuestion());
   }
 
   // 선택지
   const choices = monster.choices || ['①', '②', '③', '④'];
   const choiceWidth = 175;
-  const choiceHeight = 50;
+  const choiceHeight = 48;
   const gapX = 10;
   const gapY = 8;
   const startX = 20;
-  const choiceStartY = 455;
+  const choiceStartY = 415;
 
   choices.forEach((choice, i) => {
     const col = i % 2;
@@ -155,52 +158,52 @@ export function renderBattleScreen(game) {
   // 타이머
   const difficulty = monster.difficulty || 2;
   const maxTime = game.playerManager.getTotalTime(difficulty);
-  Renderer.drawTimerBar(100, 575, 200, 12, game.timer, maxTime, effects.pulseTime);
+  Renderer.drawTimerBar(100, 545, 200, 12, game.timer, maxTime, effects.pulseTime);
 
   const timerColor = game.timer < 10 ? COLORS.DANGER : game.timer < maxTime * 0.25 ? COLORS.WARNING : COLORS.TEXT_PRIMARY;
-  Renderer.drawText(`⏱️ ${Math.max(0, Math.ceil(game.timer))}${t('seconds')}`, 200, 595, {
+  Renderer.drawText(`⏱️ ${Math.max(0, Math.ceil(game.timer))}${t('seconds')}`, 200, 565, {
     font: 'bold 14px system-ui', color: timerColor, align: 'center'
   });
 
   // 아이템 드랍 알림
   const droppedItem = game.itemManager.droppedItem;
   if (droppedItem) {
-    Renderer.roundRect(50, 140, 300, 50, 12, droppedItem.rarity.color);
-    Renderer.drawText(`${droppedItem.icon} ${droppedItem.name} ${t('obtained')}`, 200, 155, {
+    Renderer.roundRect(50, 130, 300, 50, 12, droppedItem.rarity.color);
+    Renderer.drawText(`${droppedItem.icon} ${droppedItem.name} ${t('obtained')}`, 200, 145, {
       font: 'bold 16px system-ui', color: '#000', align: 'center'
     });
-    Renderer.drawText(`[${t(droppedItem.rarity.nameKey)}]`, 200, 175, {
+    Renderer.drawText(`[${t(droppedItem.rarity.nameKey)}]`, 200, 165, {
       font: '12px system-ui', color: '#333', align: 'center'
     });
   }
 
   // 하단 버튼
-  Renderer.roundRect(0, 610, 400, 90, 0, COLORS.BG_SECONDARY);
+  Renderer.roundRect(0, 600, 400, 100, 0, COLORS.BG_SECONDARY);
 
   const hintCount = player.inventory?.hintTicket || 0;
   const hasHint = hintCount > 0;
-  Renderer.drawButton(10, 625, 90, 45, `💡${hintCount}`, {
+  Renderer.drawButton(10, 618, 90, 46, `💡${hintCount}`, {
     bgColor: hasHint ? 'rgba(251,191,36,0.2)' : 'rgba(100,100,100,0.15)',
     borderColor: hasHint ? 'rgba(251,191,36,0.6)' : 'rgba(100,100,100,0.3)',
-    textColor: hasHint ? COLORS.WARNING : COLORS.TEXT_SECONDARY, fontSize: 13
+    textColor: hasHint ? COLORS.WARNING : COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('hint', 10, 625, 90, 45, () => game.battleManager.useHint());
+  game.registerClickArea('hint', 10, 618, 90, 46, () => game.battleManager.useHint());
 
   const hasTimeBoost = (player.inventory?.timeBoost || 0) > 0;
-  Renderer.drawButton(105, 625, 90, 45, `⏰${player.inventory?.timeBoost || 0}`, {
+  Renderer.drawButton(105, 618, 90, 46, `⏰${player.inventory?.timeBoost || 0}`, {
     bgColor: hasTimeBoost ? 'rgba(34,197,94,0.2)' : 'rgba(100,100,100,0.15)',
     borderColor: hasTimeBoost ? 'rgba(34,197,94,0.6)' : 'rgba(100,100,100,0.3)',
-    textColor: hasTimeBoost ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, fontSize: 13
+    textColor: hasTimeBoost ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('timeBoost', 105, 625, 90, 45, () => game.battleManager.useTimeBoost());
+  game.registerClickArea('timeBoost', 105, 618, 90, 46, () => game.battleManager.useTimeBoost());
 
-  Renderer.drawButton(200, 625, 90, 45, t('skip'), {
-    bgColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.5)', textColor: COLORS.DANGER, fontSize: 13
+  Renderer.drawButton(200, 618, 90, 46, t('skip'), {
+    bgColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.5)', textColor: COLORS.DANGER, fontSize: 14
   });
-  game.registerClickArea('skip', 200, 625, 90, 45, () => game.battleManager.skipQuestion());
+  game.registerClickArea('skip', 200, 618, 90, 46, () => game.battleManager.skipQuestion());
 
-  Renderer.drawButton(295, 625, 95, 45, t('quit'), {
-    bgColor: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.5)', textColor: COLORS.ACCENT_LIGHT, fontSize: 13
+  Renderer.drawButton(295, 618, 95, 46, t('quit'), {
+    bgColor: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.5)', textColor: COLORS.ACCENT_LIGHT, fontSize: 14
   });
-  game.registerClickArea('quit', 295, 625, 95, 45, () => game.endRun(false));
+  game.registerClickArea('quit', 295, 618, 95, 46, () => game.endRun(false));
 }

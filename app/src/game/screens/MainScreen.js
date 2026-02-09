@@ -79,36 +79,42 @@ export function renderMainScreen(game) {
   // ── y=390~460: HTML 오답등록 버튼 ──
 
   // === 통계 & 상점 & 설정 & 업적 ===
-  Renderer.drawButton(20, 480, 86, 60, t('stats'), { bgColor: COLORS.BG_CARD, borderColor: '#38bdf8', fontSize: 16, stroke: true });
-  game.registerClickArea('stats', 20, 480, 86, 60, () => game.changeScreen(SCREENS.STATS));
+  const menuBtnW = 85;
+  const menuBtnH = 55;
+  const menuBtnGap = 8;
+  const menuStartX = 20;
+  const menuY = 480;
 
-  Renderer.drawButton(112, 480, 86, 60, t('shop'), { bgColor: COLORS.BG_CARD, borderColor: '#22c55e', fontSize: 16, stroke: true });
-  game.registerClickArea('shop', 112, 480, 86, 60, () => game.changeScreen(SCREENS.SHOP));
+  Renderer.drawButton(menuStartX, menuY, menuBtnW, menuBtnH, t('stats'), { bgColor: COLORS.BG_CARD, borderColor: '#38bdf8', fontSize: 15, stroke: true });
+  game.registerClickArea('stats', menuStartX, menuY, menuBtnW, menuBtnH, () => game.changeScreen(SCREENS.STATS));
 
-  Renderer.drawButton(204, 480, 86, 60, t('achievement'), { bgColor: COLORS.BG_CARD, borderColor: '#fbbf24', fontSize: 16, stroke: true });
-  game.registerClickArea('achievement', 204, 480, 86, 60, () => game.changeScreen(SCREENS.ACHIEVEMENT));
+  Renderer.drawButton(menuStartX + (menuBtnW + menuBtnGap), menuY, menuBtnW, menuBtnH, t('shop'), { bgColor: COLORS.BG_CARD, borderColor: '#22c55e', fontSize: 15, stroke: true });
+  game.registerClickArea('shop', menuStartX + (menuBtnW + menuBtnGap), menuY, menuBtnW, menuBtnH, () => game.changeScreen(SCREENS.SHOP));
 
-  Renderer.drawButton(296, 480, 86, 60, t('settings'), { bgColor: COLORS.BG_CARD, borderColor: COLORS.TEXT_SECONDARY, fontSize: 16, stroke: true });
-  game.registerClickArea('settings', 296, 480, 86, 60, () => game.changeScreen(SCREENS.SETTINGS));
+  Renderer.drawButton(menuStartX + (menuBtnW + menuBtnGap) * 2, menuY, menuBtnW, menuBtnH, t('achievement'), { bgColor: COLORS.BG_CARD, borderColor: '#fbbf24', fontSize: 15, stroke: true });
+  game.registerClickArea('achievement', menuStartX + (menuBtnW + menuBtnGap) * 2, menuY, menuBtnW, menuBtnH, () => game.changeScreen(SCREENS.ACHIEVEMENT));
+
+  Renderer.drawButton(menuStartX + (menuBtnW + menuBtnGap) * 3, menuY, menuBtnW + 3, menuBtnH, t('settings'), { bgColor: COLORS.BG_CARD, borderColor: COLORS.TEXT_SECONDARY, fontSize: 15, stroke: true });
+  game.registerClickArea('settings', menuStartX + (menuBtnW + menuBtnGap) * 3, menuY, menuBtnW + 3, menuBtnH, () => game.changeScreen(SCREENS.SETTINGS));
 
   // === AI 상태 ===
   const hasSmilePrintKey = problemGeneratorService.hasApiKey();
   if (hasSmilePrintKey) {
-    Renderer.drawButton(20, 560, 360, 50, t('aiGenerate'), {
+    Renderer.drawButton(20, 555, 360, 48, t('aiGenerate'), {
       bgColor: '#1d4ed8', borderColor: '#4b8df8', fontSize: 16, stroke: true
     });
-    game.registerClickArea('aiGenerate', 20, 560, 360, 50, () => game.showAIGenerateMenu());
+    game.registerClickArea('aiGenerate', 20, 555, 360, 48, () => game.showAIGenerateMenu());
   } else {
-    Renderer.roundRect(20, 560, 360, 42, 12, COLORS.BG_CARD);
+    Renderer.roundRect(20, 555, 360, 40, 12, COLORS.BG_CARD);
     const hasGemini = geminiService.hasApiKey();
     const aiStatus = hasGemini ? t('aiConnected') : t('aiNotConnected');
-    Renderer.drawText(aiStatus, 200, 576, {
+    Renderer.drawText(aiStatus, 200, 570, {
       font: '13px system-ui', color: hasGemini ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, align: 'center', stroke: true
     });
   }
 
   // 슬로건
-  Renderer.drawText(t('slogan'), 200, 660, {
-    font: '15px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+  Renderer.drawText(t('slogan'), 200, 665, {
+    font: '14px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
   });
 }

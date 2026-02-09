@@ -61,8 +61,8 @@ export function renderRegisterScreen(game) {
   });
 
   // 취소 버튼
-  Renderer.drawButton(100, 560, 200, 45, t('cancel'), {
+  Renderer.drawButton(100, 510, 200, 45, t('cancel'), {
     bgColor: COLORS.BG_SECONDARY, borderColor: COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('retake', 100, 560, 200, 45, () => game.startRegister());
+  game.registerClickArea('retake', 100, 510, 200, 45, () => game.startRegister());
 }
