@@ -92,7 +92,7 @@ describe('Constants', () => {
     it('CONST-SUB-002: 각 과목에 필수 속성이 있어야 한다', () => {
       Object.values(SUBJECTS).forEach(subject => {
         expect(subject.id).toBeDefined();
-        expect(subject.name).toBeDefined();
+        expect(subject.nameKey).toBeDefined();
         expect(subject.icon).toBeDefined();
         expect(subject.color).toBeDefined();
       });
@@ -129,7 +129,7 @@ describe('Constants', () => {
     it('CONST-RAR-002: 각 희귀도에 필수 속성이 있어야 한다', () => {
       Object.values(RARITY).forEach(rarity => {
         expect(rarity.id).toBeDefined();
-        expect(rarity.name).toBeDefined();
+        expect(rarity.nameKey).toBeDefined();
         expect(rarity.color).toBeDefined();
         expect(rarity.dropRate).toBeDefined();
       });

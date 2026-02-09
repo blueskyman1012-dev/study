@@ -1,8 +1,9 @@
 // AI 문제 생성 서비스 (수학 전용)
 // SmilePrint API 사용
+import { safeGetItem } from '../utils/storage.js';
 
 const API_BASE_URL = 'https://caricature-api-rust.wizice.com';
-const DEFAULT_MODEL = 'gemini-2.0-flash-exp';
+const DEFAULT_MODEL = 'gemini-2.0-flash';
 
 // 수학 주제 목록
 const MATH_TOPICS = {
@@ -18,6 +19,18 @@ const MATH_TOPICS = {
   geometry: { name: '도형', examples: '삼각형 넓이' }
 };
 
+// 과학 주제 목록
+const SCIENCE_TOPICS = {
+  force: { name: '힘과 운동', examples: '등속운동, 가속도, F=ma', level: '중' },
+  chemical: { name: '화학반응', examples: '화학반응식, 질량보존법칙', level: '중' },
+  cell: { name: '세포', examples: '세포 구조, 세포분열, 삼투현상', level: '중' },
+  earth: { name: '지구과학', examples: '지층, 판구조론, 기상현상', level: '중' },
+  mechanics: { name: '역학', examples: '운동방정식, 일과 에너지, 운동량', level: '고' },
+  electromagnetic: { name: '전자기', examples: '전기장, 자기장, 전자기유도', level: '고' },
+  mole: { name: '몰과 반응식', examples: '몰 개념, 화학양론, 농도 계산', level: '고' },
+  genetics: { name: '유전', examples: '멘델유전, DNA, 유전자 발현', level: '고' }
+};
+
 export class ProblemGeneratorService {
   constructor() {
     this.apiKey = null;
@@ -26,7 +39,7 @@ export class ProblemGeneratorService {
 
   // API 키 로드 (ImageAnalysisService와 공유)
   loadApiKey() {
-    this.apiKey = localStorage.getItem('smileprint_api_key');
+    this.apiKey = safeGetItem('smileprint_api_key');
     return this.apiKey;
   }
 
@@ -72,6 +85,45 @@ ${topicInfo.name} 문제를 ${count}개 만드세요.
 - choices[0]은 반드시 정답
 - 모든 choices는 숫자만
 - explanation은 단계별 풀이`;
+  }
+
+  // 과학 문제 생성 Prompt
+  buildSciencePrompt(topic, difficulty, count) {
+    const topicInfo = SCIENCE_TOPICS[topic] || SCIENCE_TOPICS.force;
+    const difficultyText = ['쉬움', '보통', '어려움'][difficulty - 1] || '보통';
+
+    return `당신은 한국 과학 선생님입니다. 중학교와 고등학교 과학을 가르칩니다.
+
+## 작업
+${topicInfo.name} (${topicInfo.level}등학교) 문제를 ${count}개 만드세요.
+예시 주제: ${topicInfo.examples}
+
+## 조건
+- 난이도: ${difficultyText}
+- 정답은 반드시 짧은 텍스트 또는 숫자 (예: "가속도", "36", "DNA")
+- 학생이 자주 혼동하는 개념을 반영한 오답 3개 포함
+- 오답은 정답과 관련된 과학 용어로 (예: 정답 "가속도" → 오답 "속력", "변위", "관성")
+- 계산 문제는 단위를 포함 (예: "10 m/s²")
+
+## JSON 출력 (반드시 이 형식만)
+{
+  "problems": [
+    {
+      "question": "문제 내용",
+      "answer": "정답",
+      "answers": ["정답"],
+      "choices": ["정답", "오답1", "오답2", "오답3"],
+      "correctIndex": 0,
+      "explanation": "풀이: 상세한 과학적 설명",
+      "difficulty": ${difficulty},
+      "topic": "${topicInfo.name}"
+    }
+  ]
+}
+
+## 필수
+- choices[0]은 반드시 정답
+- explanation은 과학적 원리를 포함한 상세 풀이`;
   }
 
   // 유사 문제 생성 Prompt
@@ -196,14 +248,16 @@ ${topicInfo.name} 문제를 ${count}개 만드세요.
   // 완료 대기
   async waitForCompletion(jobId, accessKey, maxAttempts = 60) {
     for (let i = 0; i < maxAttempts; i++) {
-      await this.sleep(1000);
+      // 첫 폴링은 짧게, 이후 점진적으로 늘림
+      const delay = i === 0 ? 300 : i < 5 ? 800 : 1500;
+      await this.sleep(delay);
 
       const response = await fetch(`${API_BASE_URL}/api/v1/analyze/status/${jobId}`, {
         headers: { 'Authorization': `Bearer ${accessKey}` }
       });
 
       const status = await response.json();
-      console.log(`📊 상태: ${status.status}`);
+      console.log(`📊 상태: ${status.status} (${i + 1}/${maxAttempts})`);
 
       if (status.status === 'completed') return status;
       if (status.status === 'failed') throw new Error(status.errorMessage || '생성 실패');
@@ -230,8 +284,10 @@ ${topicInfo.name} 문제를 ${count}개 만드세요.
   // ===== 공개 메서드 =====
 
   // 주제별 문제 생성
-  async generateProblems(topic = 'linear', difficulty = 2, count = 3) {
-    const prompt = this.buildGeneratePrompt(topic, difficulty, count);
+  async generateProblems(topic = 'linear', difficulty = 2, count = 3, subject = 'math') {
+    const prompt = subject === 'science'
+      ? this.buildSciencePrompt(topic, difficulty, count)
+      : this.buildGeneratePrompt(topic, difficulty, count);
     const result = await this.callAPI(prompt);
 
     if (!result || !result.problems) {
@@ -269,17 +325,18 @@ ${topicInfo.name} 문제를 ${count}개 만드세요.
   }
 
   // 랜덤 주제로 문제 생성
-  async generateRandom(count = 5) {
-    const topics = Object.keys(MATH_TOPICS);
+  async generateRandom(count = 5, subject = 'math') {
+    const topicSource = subject === 'science' ? SCIENCE_TOPICS : MATH_TOPICS;
+    const topics = Object.keys(topicSource);
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
     const randomDifficulty = Math.floor(Math.random() * 3) + 1;
 
-    return await this.generateProblems(randomTopic, randomDifficulty, count);
+    return await this.generateProblems(randomTopic, randomDifficulty, count, subject);
   }
 
   // 주제 목록 반환
-  getTopics() {
-    return MATH_TOPICS;
+  getTopics(subject = 'math') {
+    return subject === 'science' ? SCIENCE_TOPICS : MATH_TOPICS;
   }
 }
 

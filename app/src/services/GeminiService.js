@@ -1,28 +1,32 @@
 // Gemini AI 서비스
+import { apiService } from './ApiService.js';
+import { safeGetItem, safeSetItem } from '../utils/storage.js';
 // 텍스트 전용
 const GEMINI_TEXT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 // 이미지 분석용 (Vision 지원)
 const GEMINI_VISION_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
-// 기본 API 키
-const DEFAULT_API_KEY = 'AIzaSyABI7MKqaDWfmIO1qtNgYaGml6RFez5uhY';
-
 export class GeminiService {
   constructor(apiKey) {
-    this.apiKey = apiKey || DEFAULT_API_KEY;
+    this.apiKey = apiKey || null;
   }
 
-  // API 키 설정
+  // API 키 설정 (로컬 + 서버 저장)
   setApiKey(key) {
     this.apiKey = key;
-    localStorage.setItem('gemini_api_key', key);
+    safeSetItem('gemini_api_key', key);
+    if (apiService.isLoggedIn()) {
+      apiService.saveKey('gemini_api_key', key).catch(err =>
+        console.warn('Gemini 키 서버 저장 실패:', err)
+      );
+    }
   }
 
   // 저장된 API 키 로드
   loadApiKey() {
-    const savedKey = localStorage.getItem('gemini_api_key');
-    this.apiKey = savedKey || DEFAULT_API_KEY;
-    console.log('API 키 로드됨:', this.apiKey ? '있음' : '없음');
+    const savedKey = safeGetItem('gemini_api_key');
+    this.apiKey = savedKey || null;
+    console.log('Gemini API 키 로드됨:', this.apiKey ? '있음' : '없음');
     return this.apiKey;
   }
 
@@ -88,6 +92,15 @@ JSON 형식:
       })
     });
 
+    if (!response.ok) {
+      let errorMsg = `HTTP ${response.status}`;
+      try {
+        const err = await response.json();
+        errorMsg = err.error?.message || errorMsg;
+      } catch { /* 파싱 실패 무시 */ }
+      throw new Error(errorMsg);
+    }
+
     const data = await response.json();
     console.log('Gemini 이미지 분석 응답:', data);
 
@@ -97,7 +110,7 @@ JSON 형식:
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) {
-      throw new Error('응답 없음');
+      throw new Error('AI가 빈 응답을 반환했습니다');
     }
 
     const result = this.parseJSON(text);
@@ -131,12 +144,20 @@ JSON 형식:
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'API 호출 실패');
+      let errorMsg = `HTTP ${response.status}`;
+      try {
+        const error = await response.json();
+        errorMsg = error.error?.message || errorMsg;
+      } catch { /* 파싱 실패 무시 */ }
+      throw new Error(errorMsg);
     }
 
     const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('AI가 빈 응답을 반환했습니다');
+    }
+    return text;
   }
 
   // 문제 유형 분석

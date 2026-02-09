@@ -1,60 +1,157 @@
 // Canvas 렌더러
 import { COLORS } from '../utils/constants.js';
+import { safeGetItem, safeSetItem } from '../utils/storage.js';
+
+export const BG_THEMES = [
+  { id: 'default', bg: '#0a0a0f', grid: 'rgba(120,130,255,0.5)', gridSub: 'rgba(120,130,255,0.18)', glow: 'rgba(99,102,241,0.4)' },
+  { id: 'emerald', bg: '#060f0a', grid: 'rgba(52,211,153,0.5)', gridSub: 'rgba(52,211,153,0.18)', glow: 'rgba(16,185,129,0.4)' },
+  { id: 'crimson', bg: '#0f0606', grid: 'rgba(248,113,113,0.5)', gridSub: 'rgba(248,113,113,0.18)', glow: 'rgba(239,68,68,0.4)' },
+  { id: 'amber', bg: '#0f0b04', grid: 'rgba(251,191,36,0.5)', gridSub: 'rgba(251,191,36,0.18)', glow: 'rgba(245,158,11,0.4)' },
+  { id: 'violet', bg: '#0b060f', grid: 'rgba(167,139,250,0.5)', gridSub: 'rgba(167,139,250,0.18)', glow: 'rgba(139,92,246,0.4)' },
+  { id: 'cyan', bg: '#040b0f', grid: 'rgba(34,211,238,0.5)', gridSub: 'rgba(34,211,238,0.18)', glow: 'rgba(6,182,212,0.4)' },
+  { id: 'rose', bg: '#0f0408', grid: 'rgba(251,113,133,0.5)', gridSub: 'rgba(251,113,133,0.18)', glow: 'rgba(244,63,94,0.4)' },
+];
 
 export const Renderer = {
   ctx: null,
   width: 400,
   height: 700,
 
+  _gridCache: null,
+  _bgTheme: null,
+  _uiOpacity: null,
+  _bgImage: null,
+  _bgImageList: null,
+
   init(ctx, width, height) {
     this.ctx = ctx;
     this.width = width;
     this.height = height;
+    this._gridCache = null;
+    // 재입장 시 초기화 (기본값으로 복원)
+    safeSetItem('bg_image', '');
+    safeSetItem('ui_opacity', '1');
+    safeSetItem('bg_theme', 'default');
+    this._bgImage = null;
+    this._uiOpacity = 1.0;
+    this._bgTheme = BG_THEMES[0];
+  },
+
+  _loadUiOpacity() {
+    const val = safeGetItem('ui_opacity');
+    this._uiOpacity = val !== null ? parseFloat(val) : 1.0;
+  },
+
+  getUiOpacity() {
+    if (this._uiOpacity === null) this._loadUiOpacity();
+    return this._uiOpacity;
+  },
+
+  setUiOpacity(val) {
+    this._uiOpacity = Math.max(0.1, Math.min(1.0, val));
+    safeSetItem('ui_opacity', String(this._uiOpacity));
+  },
+
+  applyUiOpacity() {
+    this.ctx.globalAlpha = this.getUiOpacity();
+  },
+
+  resetOpacity() {
+    this.ctx.globalAlpha = 1;
+  },
+
+  _loadBgTheme() {
+    const id = safeGetItem('bg_theme') || 'default';
+    this._bgTheme = BG_THEMES.find(t => t.id === id) || BG_THEMES[0];
+  },
+
+  setRandomBgTheme() {
+    const others = BG_THEMES.filter(t => t.id !== this._bgTheme?.id);
+    const picked = others[Math.floor(Math.random() * others.length)];
+    safeSetItem('bg_theme', picked.id);
+    this._bgTheme = picked;
+    this._gridCache = null;
+    // 색상 테마로 변경 시 이미지 배경 해제
+    this._bgImage = null;
+    safeSetItem('bg_image', '');
+  },
+
+  // 배경 이미지 목록 로드 (매번 새로 fetch)
+  async loadBgImageList() {
+    try {
+      const resp = await fetch('./background/list.json?' + Date.now());
+      if (!resp.ok) {
+        this._bgImageList = [];
+        return this._bgImageList;
+      }
+      this._bgImageList = await resp.json();
+    } catch {
+      this._bgImageList = [];
+    }
+    return this._bgImageList;
+  },
+
+  async _loadBgImage(path) {
+    if (!path) { this._bgImage = null; return false; }
+    // 상대 경로로 변환
+    const src = path.startsWith('/') ? '.' + path : path;
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => { this._bgImage = img; resolve(true); };
+      img.onerror = () => { this._bgImage = null; resolve(false); };
+      img.src = src;
+    });
   },
 
   // 화면 클리어
   clear() {
-    this.ctx.fillStyle = COLORS.BG_PRIMARY;
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    if (this._bgImage && this._bgImage.complete) {
+      this.ctx.drawImage(this._bgImage, 0, 0, this.width, this.height);
+      // 반투명 오버레이로 UI 가독성 확보
+      this.ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      this.ctx.fillRect(0, 0, this.width, this.height);
+    } else {
+      this.ctx.fillStyle = this._bgTheme?.bg || COLORS.BG_PRIMARY;
+      this.ctx.fillRect(0, 0, this.width, this.height);
+    }
   },
 
-  // 그리드 패턴
+  // 그리드 패턴 (오프스크린 캐싱) - 이미지 배경일 때는 그리지 않음
   drawGrid() {
-    // 메인 그리드 (굵은 선)
-    this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.38)';
-    this.ctx.lineWidth = 1;
+    // 이미지 배경이 설정되어 있으면 그리드 숨김
+    if (this._bgImage && this._bgImage.complete) return;
 
-    for (let x = 0; x <= this.width; x += 40) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.height);
-      this.ctx.stroke();
+    if (!this._gridCache) {
+      const theme = this._bgTheme || BG_THEMES[0];
+      const offscreen = document.createElement('canvas');
+      offscreen.width = this.width;
+      offscreen.height = this.height;
+      const oc = offscreen.getContext('2d');
+
+      // 주 그리드 (네온 효과)
+      oc.strokeStyle = theme.grid;
+      oc.lineWidth = 1;
+      oc.shadowColor = theme.glow;
+      oc.shadowBlur = 3;
+      for (let x = 0; x <= this.width; x += 40) {
+        oc.beginPath(); oc.moveTo(x, 0); oc.lineTo(x, this.height); oc.stroke();
+      }
+      for (let y = 0; y <= this.height; y += 40) {
+        oc.beginPath(); oc.moveTo(0, y); oc.lineTo(this.width, y); oc.stroke();
+      }
+      // 보조 그리드
+      oc.shadowBlur = 0;
+      oc.strokeStyle = theme.gridSub;
+      oc.lineWidth = 0.5;
+      for (let x = 20; x <= this.width; x += 40) {
+        oc.beginPath(); oc.moveTo(x, 0); oc.lineTo(x, this.height); oc.stroke();
+      }
+      for (let y = 20; y <= this.height; y += 40) {
+        oc.beginPath(); oc.moveTo(0, y); oc.lineTo(this.width, y); oc.stroke();
+      }
+      this._gridCache = offscreen;
     }
-
-    for (let y = 0; y <= this.height; y += 40) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.width, y);
-      this.ctx.stroke();
-    }
-
-    // 서브 그리드 (가는 선)
-    this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
-    this.ctx.lineWidth = 0.5;
-
-    for (let x = 20; x <= this.width; x += 40) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.height);
-      this.ctx.stroke();
-    }
-
-    for (let y = 20; y <= this.height; y += 40) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.width, y);
-      this.ctx.stroke();
-    }
+    this.ctx.drawImage(this._gridCache, 0, 0);
   },
 
   // 둥근 사각형
@@ -173,7 +270,8 @@ export const Renderer = {
       font = '14px',
       color = COLORS.TEXT_PRIMARY,
       align = 'left',
-      baseline = 'top'
+      baseline = 'top',
+      stroke = false
     } = options;
 
     // font에서 weight와 size 추출
@@ -185,6 +283,14 @@ export const Renderer = {
     this.ctx.font = `${weight}${size}px Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
     this.ctx.textAlign = align;
     this.ctx.textBaseline = baseline;
+
+    if (stroke) {
+      this.ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      this.ctx.lineWidth = 3;
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeText(text, x, y);
+    }
+
     this.ctx.fillStyle = color;
     this.ctx.fillText(text, x, y);
   },
@@ -195,7 +301,8 @@ export const Renderer = {
       bgColor = COLORS.ACCENT,
       textColor = COLORS.TEXT_PRIMARY,
       borderColor = null,
-      fontSize = 16
+      fontSize = 16,
+      stroke = false
     } = options;
 
     this.roundRect(x, y, w, h, 12, bgColor, borderColor);
@@ -203,7 +310,8 @@ export const Renderer = {
       font: `bold ${fontSize}px system-ui`,
       color: textColor,
       align: 'center',
-      baseline: 'middle'
+      baseline: 'middle',
+      stroke
     });
   },
 
@@ -212,6 +320,19 @@ export const Renderer = {
     if (img && img.complete) {
       this.ctx.drawImage(img, x, y, w, h);
     }
+  },
+
+  // 그래디언트 카드 배경
+  drawGradientCard(x, y, w, h, r, colorTop, colorBottom) {
+    const gradient = this.ctx.createLinearGradient(x, y, x, y + h);
+    gradient.addColorStop(0, colorTop);
+    gradient.addColorStop(1, colorBottom);
+    this.roundRect(x, y, w, h, r, gradient);
+  },
+
+  // 현재 테마 ID 반환
+  getCurrentBgThemeId() {
+    return this._bgTheme?.id || 'default';
   },
 
   // 원

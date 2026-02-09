@@ -1,4 +1,6 @@
 // 효과음 + BGM 서비스 (Web Audio API)
+import { safeGetItem, safeSetItem } from '../utils/storage.js';
+
 class SoundServiceClass {
   constructor() {
     this.audioContext = null;
@@ -18,10 +20,10 @@ class SoundServiceClass {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
     // 설정 로드
-    this.sfxEnabled = localStorage.getItem('sfx_enabled') !== 'false';
-    this.bgmEnabled = localStorage.getItem('bgm_enabled') !== 'false';
-    this.volume = parseFloat(localStorage.getItem('sound_volume') || '0.5');
-    this.bgmVolume = parseFloat(localStorage.getItem('bgm_volume') || '0.35');
+    this.sfxEnabled = safeGetItem('sfx_enabled') !== 'false';
+    this.bgmEnabled = safeGetItem('bgm_enabled') !== 'false';
+    this.volume = parseFloat(safeGetItem('sound_volume') || '0.5');
+    this.bgmVolume = parseFloat(safeGetItem('bgm_volume') || '0.35');
   }
 
   // === 개별 토글 ===
@@ -32,13 +34,13 @@ class SoundServiceClass {
 
   toggleSfx() {
     this.sfxEnabled = !this.sfxEnabled;
-    localStorage.setItem('sfx_enabled', this.sfxEnabled);
+    safeSetItem('sfx_enabled', this.sfxEnabled);
     return this.sfxEnabled;
   }
 
   toggleBgm() {
     this.bgmEnabled = !this.bgmEnabled;
-    localStorage.setItem('bgm_enabled', this.bgmEnabled);
+    safeSetItem('bgm_enabled', this.bgmEnabled);
     if (this.bgmEnabled) {
       this.startLobbyBgm();
     } else {
@@ -52,8 +54,8 @@ class SoundServiceClass {
     const newState = !(this.sfxEnabled && this.bgmEnabled);
     this.sfxEnabled = newState;
     this.bgmEnabled = newState;
-    localStorage.setItem('sfx_enabled', this.sfxEnabled);
-    localStorage.setItem('bgm_enabled', this.bgmEnabled);
+    safeSetItem('sfx_enabled', this.sfxEnabled);
+    safeSetItem('bgm_enabled', this.bgmEnabled);
     if (!this.bgmEnabled) this.stopBgm();
     return newState;
   }
@@ -61,7 +63,7 @@ class SoundServiceClass {
   // 볼륨 설정
   setVolume(vol) {
     this.volume = Math.max(0, Math.min(1, vol));
-    localStorage.setItem('sound_volume', this.volume);
+    safeSetItem('sound_volume', this.volume);
   }
 
   // ===== BGM =====
@@ -335,14 +337,52 @@ class SoundServiceClass {
     this.playTone(440, 0.1, 'square', 0.2);
   }
 
-  // 몬스터 처치
+  // 몬스터 처치 (타격감 있는 폭발 + 승리 팡파레)
   playMonsterDefeat() {
     if (!this.sfxEnabled) return;
     this.init();
 
-    this.playTone(200, 0.1, 'sawtooth', 0.3);
-    setTimeout(() => this.playTone(250, 0.1, 'sawtooth', 0.3), 50);
-    setTimeout(() => this.playTone(300, 0.15, 'sawtooth', 0.3), 100);
+    // 1) 타격 폭발음 (노이즈 버스트)
+    this._playNoiseBurst(0.06, 0.5);
+
+    // 2) 저음 임팩트
+    this.playTone(80, 0.15, 'sawtooth', 0.5);
+    this.playTone(120, 0.12, 'square', 0.2);
+
+    // 3) 상승 팡파레 (처치 쾌감)
+    setTimeout(() => this.playTone(523.25, 0.08, 'sine', 0.4), 80);   // C5
+    setTimeout(() => this.playTone(659.25, 0.08, 'sine', 0.4), 140);  // E5
+    setTimeout(() => this.playTone(783.99, 0.12, 'sine', 0.45), 200); // G5
+    setTimeout(() => this.playTone(1046.50, 0.18, 'sine', 0.35), 270); // C6
+
+    // 4) 잔향 반짝임
+    setTimeout(() => this.playTone(1318.51, 0.06, 'sine', 0.2), 380); // E6
+    setTimeout(() => this.playTone(1567.98, 0.06, 'sine', 0.15), 430); // G6
+  }
+
+  // 노이즈 버스트 (폭발/임팩트용)
+  _playNoiseBurst(duration, vol) {
+    if (!this.audioContext) return;
+    const ctx = this.audioContext;
+    const bufferSize = ctx.sampleRate * duration;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1500;
+    filter.Q.value = 0.8;
+    gain.gain.setValueAtTime(this.volume * vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
   }
 
   // 보스 등장
@@ -365,15 +405,35 @@ class SoundServiceClass {
     });
   }
 
-  // 게임 오버
+  // 게임 오버 (무거운 패배감 + 붕괴하는 느낌)
   playGameOver() {
     if (!this.sfxEnabled) return;
     this.init();
 
-    this.playTone(392, 0.3, 'triangle', 0.4);  // G4
-    setTimeout(() => this.playTone(349.23, 0.3, 'triangle', 0.4), 300);  // F4
-    setTimeout(() => this.playTone(329.63, 0.3, 'triangle', 0.4), 600);  // E4
-    setTimeout(() => this.playTone(293.66, 0.5, 'triangle', 0.4), 900);  // D4
+    // 1) 심장 멈추는 듯한 저음 임팩트
+    this.playTone(60, 0.4, 'sawtooth', 0.5);
+    this._playNoiseBurst(0.1, 0.3);
+
+    // 2) 슬프게 하강하는 단조 멜로디
+    setTimeout(() => {
+      this.playTone(392, 0.35, 'triangle', 0.4);    // G4
+      this.playTone(466.16, 0.35, 'triangle', 0.15); // Bb4 (단조 느낌)
+    }, 300);
+    setTimeout(() => {
+      this.playTone(349.23, 0.35, 'triangle', 0.4);  // F4
+      this.playTone(415.30, 0.35, 'triangle', 0.12); // Ab4
+    }, 650);
+    setTimeout(() => {
+      this.playTone(293.66, 0.4, 'triangle', 0.4);   // D4
+      this.playTone(349.23, 0.4, 'triangle', 0.12);  // F4
+    }, 1000);
+
+    // 3) 마지막 무거운 저음 (붕괴)
+    setTimeout(() => {
+      this.playTone(130.81, 0.7, 'sawtooth', 0.3);   // C3
+      this.playTone(155.56, 0.7, 'triangle', 0.2);   // Eb3
+      this.playTone(73.42, 0.8, 'triangle', 0.25);   // D2
+    }, 1400);
   }
 
   // 클리어

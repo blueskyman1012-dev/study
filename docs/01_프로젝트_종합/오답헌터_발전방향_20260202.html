@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오답헌터 발전 방향 로드맵</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #e0e0e0;
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 80px 20px 50px;
+      background: radial-gradient(ellipse at center, rgba(99,102,241,0.3) 0%, transparent 70%);
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      background: linear-gradient(135deg, #a78bfa, #6366f1, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .hero .subtitle {
+      font-size: 1.2rem;
+      color: #94a3b8;
+    }
+    .hero .current-status {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .status-chip {
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      color: #a78bfa;
+    }
+
+    /* Nav */
+    .phase-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,12,41,0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(99,102,241,0.2);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .phase-nav a {
+      color: #94a3b8;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      transition: all 0.3s;
+    }
+    .phase-nav a:hover {
+      background: rgba(99,102,241,0.2);
+      color: #a78bfa;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Phase Section */
+    .phase {
+      margin-bottom: 60px;
+    }
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 30px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid rgba(99,102,241,0.3);
+    }
+    .phase-number {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .phase-1 .phase-number { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .phase-2 .phase-number { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    .phase-3 .phase-number { background: linear-gradient(135deg, #10b981, #06b6d4); }
+    .phase-4 .phase-number { background: linear-gradient(135deg, #3b82f6, #6366f1); }
+    .phase-5 .phase-number { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+    .phase-6 .phase-number { background: linear-gradient(135deg, #f59e0b, #84cc16); }
+    .phase-title { font-size: 1.6rem; color: #f1f5f9; }
+
+    /* Cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: rgba(30, 27, 60, 0.8);
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+    }
+    .card:hover {
+      border-color: rgba(99,102,241,0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(99,102,241,0.15);
+    }
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    .card h3 {
+      font-size: 1.15rem;
+      color: #e2e8f0;
+      margin-bottom: 10px;
+    }
+    .card p {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+    .card ul li {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      padding: 3px 0 3px 20px;
+      position: relative;
+    }
+    .card ul li::before {
+      content: '▸';
+      position: absolute;
+      left: 4px;
+      color: #6366f1;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      margin-right: 4px;
+      margin-top: 8px;
+    }
+    .tag-high { background: rgba(239,68,68,0.2); color: #f87171; }
+    .tag-mid { background: rgba(251,191,36,0.2); color: #fbbf24; }
+    .tag-low { background: rgba(34,197,94,0.2); color: #4ade80; }
+    .tag-tech { background: rgba(99,102,241,0.2); color: #a78bfa; }
+
+    /* Priority Table */
+    .priority-section {
+      margin-top: 60px;
+    }
+    .priority-section h2 {
+      font-size: 1.6rem;
+      color: #f1f5f9;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .priority-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+    }
+    .priority-table th {
+      text-align: left;
+      padding: 12px 16px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .priority-table td {
+      padding: 14px 16px;
+      background: rgba(30, 27, 60, 0.6);
+      font-size: 0.9rem;
+    }
+    .priority-table tr td:first-child {
+      border-radius: 10px 0 0 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .priority-table tr td:last-child {
+      border-radius: 0 10px 10px 0;
+      color: #94a3b8;
+    }
+    .rank-1 { color: #fbbf24; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+    .rank-other { color: #6366f1; }
+
+    /* Tech Section */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .tech-card {
+      background: rgba(30, 27, 60, 0.6);
+      border: 1px solid rgba(99,102,241,0.1);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .tech-card h4 {
+      color: #a78bfa;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+    .tech-card ul { list-style: none; padding: 0; }
+    .tech-card ul li {
+      color: #94a3b8;
+      font-size: 0.82rem;
+      padding: 4px 0 4px 22px;
+      position: relative;
+    }
+    .tech-card ul li::before {
+      content: '☐';
+      position: absolute;
+      left: 0;
+      color: #6366f1;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: #475569;
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(99,102,241,0.1);
+    }
+
+    /* Diagram */
+    .roadmap-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 40px 0;
+    }
+    .flow-item {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      min-width: 120px;
+    }
+    .flow-arrow {
+      color: #475569;
+      font-size: 1.2rem;
+    }
+    .flow-1 { background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3)); border: 1px solid rgba(99,102,241,0.4); }
+    .flow-2 { background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(239,68,68,0.3)); border: 1px solid rgba(245,158,11,0.4); }
+    .flow-3 { background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(6,182,212,0.3)); border: 1px solid rgba(16,185,129,0.4); }
+    .flow-4 { background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(99,102,241,0.3)); border: 1px solid rgba(59,130,246,0.4); }
+    .flow-5 { background: linear-gradient(135deg, rgba(236,72,153,0.3), rgba(244,63,94,0.3)); border: 1px solid rgba(236,72,153,0.4); }
+    .flow-6 { background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(132,204,22,0.3)); border: 1px solid rgba(245,158,11,0.4); }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 2rem; }
+      .cards { grid-template-columns: 1fr; }
+      .phase-nav { gap: 4px; }
+      .phase-nav a { font-size: 0.75rem; padding: 4px 10px; }
+      .priority-table { font-size: 0.8rem; }
+      .flow-arrow { display: none; }
+      .roadmap-flow { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>🎯 오답헌터 발전 로드맵</h1>
+    <p class="subtitle">로그라이크 학습 RPG의 미래</p>
+    <div class="current-status">
+      <span class="status-chip">🎮 100층 던전</span>
+      <span class="status-chip">🤖 AI 문제분석</span>
+      <span class="status-chip">📐 수학 + 🔬 과학</span>
+      <span class="status-chip">🌐 4개 언어</span>
+      <span class="status-chip">☁️ 클라우드 동기화</span>
+      <span class="status-chip">📷 사진 등록</span>
+    </div>
+  </section>
+
+  <!-- Roadmap Flow -->
+  <div class="roadmap-flow">
+    <div class="flow-item flow-1">1단계<br>학습 강화</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item flow-2">2단계<br>게임성 강화</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item flow-3">3단계<br>소셜 기능</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item flow-4">4단계<br>AI 고도화</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item flow-5">5단계<br>플랫폼 확장</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item flow-6">6단계<br>수익화</div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="phase-nav">
+    <a href="#phase1">1. 학습 강화</a>
+    <a href="#phase2">2. 게임성</a>
+    <a href="#phase3">3. 소셜</a>
+    <a href="#phase4">4. AI</a>
+    <a href="#phase5">5. 플랫폼</a>
+    <a href="#phase6">6. 수익화</a>
+    <a href="#tech">기술 개선</a>
+    <a href="#priority">우선순위</a>
+  </nav>
+
+  <div class="container">
+
+    <!-- Phase 1 -->
+    <section id="phase1" class="phase phase-1">
+      <div class="phase-header">
+        <div class="phase-number">1</div>
+        <h2 class="phase-title">핵심 학습 기능 강화</h2>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🔄</div>
+          <h3>간격 반복 학습 (Spaced Repetition)</h3>
+          <p>틀린 문제를 과학적 주기로 자동 재출제하여 장기 기억으로 전환</p>
+          <ul>
+            <li>1일 → 3일 → 7일 → 30일 복습 주기</li>
+            <li>정답률 기반 주기 자동 조절</li>
+            <li>오답노트 화면 (필터/정렬/재도전)</li>
+          </ul>
+          <span class="tag tag-high">최우선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">📚</div>
+          <h3>과목 확장</h3>
+          <p>수학/과학 외 다양한 과목으로 확장하여 사용자층 확대</p>
+          <ul>
+            <li>🇺🇸 영어: 문법, 어휘, 독해</li>
+            <li>📖 국어: 문학, 비문학, 문법</li>
+            <li>🌍 사회/역사: 지리, 한국사, 세계사</li>
+            <li>과목별 전용 던전 테마 & 보스</li>
+          </ul>
+          <span class="tag tag-high">최우선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">✏️</div>
+          <h3>문제 유형 다양화</h3>
+          <p>4지선다 외 다양한 문제 유형 지원</p>
+          <ul>
+            <li>단답형, O/X, 빈칸 채우기</li>
+            <li>순서 배열, 드래그&드롭</li>
+            <li>서술형 (AI 키워드 기반 채점)</li>
+          </ul>
+          <span class="tag tag-mid">중요</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 2 -->
+    <section id="phase2" class="phase phase-2">
+      <div class="phase-header">
+        <div class="phase-number">2</div>
+        <h2 class="phase-title">게임성 강화</h2>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🏰</div>
+          <h3>새로운 던전 시스템</h3>
+          <p>다양한 모드로 반복 플레이 동기 부여</p>
+          <ul>
+            <li>📅 일일 던전: 매일 다른 테마 & 한정 보상</li>
+            <li>♾️ 무한 던전: 리더보드 경쟁</li>
+            <li>📝 이벤트 던전: 시험 기간 특별 콘텐츠</li>
+            <li>⏱️ 타임 어택: 제한 시간 최대 클리어</li>
+          </ul>
+          <span class="tag tag-mid">중요</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚔️</div>
+          <h3>장비 & 스킬 시스템</h3>
+          <p>전투에 깊이를 더하는 RPG 요소</p>
+          <ul>
+            <li>무기/방어구/악세서리 장착</li>
+            <li>장비 강화 (+1~+10), 세트 효과</li>
+            <li>힌트 스킬, 타임 프리즈, 더블 데미지, 흡혈</li>
+          </ul>
+          <span class="tag tag-mid">중요</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">🐣</div>
+          <h3>펫 시스템</h3>
+          <p>학습 도우미 캐릭터와 함께 성장</p>
+          <ul>
+            <li>정답률에 따라 성장 (알 → 유아 → 성체)</li>
+            <li>패시브 효과 (골드↑, 경험치↑, 자동 힌트)</li>
+            <li>다양한 종류 & 수집 요소</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏆</div>
+          <h3>업적 & 칭호</h3>
+          <p>목표 달성감과 재방문 동기 부여</p>
+          <ul>
+            <li>"100문제 정답", "연속 10콤보" 등 업적</li>
+            <li>칭호 시스템 (프로필 표시 + 특수 효과)</li>
+            <li>일일/주간 미션 시스템</li>
+          </ul>
+          <span class="tag tag-high">최우선</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 3 -->
+    <section id="phase3" class="phase phase-3">
+      <div class="phase-header">
+        <div class="phase-number">3</div>
+        <h2 class="phase-title">소셜 & 경쟁 기능</h2>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <h3>리더보드</h3>
+          <p>경쟁을 통한 학습 동기 부여</p>
+          <ul>
+            <li>주간/월간/전체 랭킹</li>
+            <li>과목별, 난이도별 분류</li>
+            <li>학교/반별 그룹 랭킹</li>
+          </ul>
+          <span class="tag tag-mid">중요</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">👥</div>
+          <h3>친구 & 문제 공유</h3>
+          <p>함께 학습하는 소셜 기능</p>
+          <ul>
+            <li>친구 추가 & 프로필 비교</li>
+            <li>내 오답을 친구에게 보내기</li>
+            <li>문제 공유 마켓 (업로드/다운로드)</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <h3>대전 모드</h3>
+          <p>실시간 경쟁으로 바이럴 성장</p>
+          <ul>
+            <li>1:1 실시간 대전 (같은 문제, 속도 경쟁)</li>
+            <li>길드전 (정답률 합산 경쟁)</li>
+            <li>주말 토너먼트 이벤트</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+          <span class="tag tag-tech">WebSocket</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 4 -->
+    <section id="phase4" class="phase phase-4">
+      <div class="phase-header">
+        <div class="phase-number">4</div>
+        <h2 class="phase-title">AI 고도화</h2>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🧠</div>
+          <h3>학습 분석 AI</h3>
+          <p>오답 패턴을 분석하여 취약점 자동 진단</p>
+          <ul>
+            <li>"이항에서 실수가 많습니다" 같은 맞춤 진단</li>
+            <li>레벨 맞춤 학습 경로 추천</li>
+            <li>주간/월간 학습 리포트 & 성장 그래프</li>
+          </ul>
+          <span class="tag tag-mid">중요</span>
+          <span class="tag tag-tech">Gemini</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">🤖</div>
+          <h3>AI 튜터</h3>
+          <p>오답 시 단계별 풀이를 안내하는 개인 튜터</p>
+          <ul>
+            <li>단계별 힌트 제공 (답을 바로 알려주지 않음)</li>
+            <li>"왜 틀렸는지" 자동 분석</li>
+            <li>TTS 음성 설명 연동</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">📸</div>
+          <h3>이미지 인식 고도화</h3>
+          <p>다양한 형태의 문제를 정확하게 인식</p>
+          <ul>
+            <li>손글씨 수식 인식 정확도 향상</li>
+            <li>그래프/도형 문제 인식</li>
+            <li>PDF/교과서 페이지 일괄 등록</li>
+          </ul>
+          <span class="tag tag-tech">SmilePrint</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">🎲</div>
+          <h3>문제 생성 고도화</h3>
+          <p>더 정교한 AI 문제 생성</p>
+          <ul>
+            <li>교과서 단원별 문제 자동 생성</li>
+            <li>난이도 10단계 세분화</li>
+            <li>학생 오답 패턴 기반 함정 선택지 생성</li>
+          </ul>
+          <span class="tag tag-tech">Gemini</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 5 -->
+    <section id="phase5" class="phase phase-5">
+      <div class="phase-header">
+        <div class="phase-number">5</div>
+        <h2 class="phase-title">플랫폼 확장</h2>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">📱</div>
+          <h3>PWA 완성</h3>
+          <p>웹앱의 네이티브 수준 경험 제공</p>
+          <ul>
+            <li>오프라인 모드 (인터넷 없이 플레이)</li>
+            <li>푸시 알림 ("복습할 시간이에요!")</li>
+            <li>홈 화면 설치 유도 배너</li>
+          </ul>
+          <span class="tag tag-mid">중요</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">🍎</div>
+          <h3>네이티브 앱</h3>
+          <p>앱스토어/플레이스토어 정식 배포</p>
+          <ul>
+            <li>React Native 또는 Flutter 전환</li>
+            <li>네이티브 카메라 연동 (촬영 품질 향상)</li>
+            <li>iOS/Android 최적화</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏫</div>
+          <h3>학교/학원 관리자 대시보드</h3>
+          <p>교육 기관을 위한 관리 도구</p>
+          <ul>
+            <li>학생 학습 현황 모니터링</li>
+            <li>과제 출제 & 문제 세트 배정</li>
+            <li>학습 리포트 PDF 다운로드</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+        </div>
+        <div class="card">
+          <div class="card-icon">👨‍👩‍👧</div>
+          <h3>학부모 모드</h3>
+          <p>자녀 학습 현황 실시간 확인</p>
+          <ul>
+            <li>학습 시간/정답률 실시간 알림</li>
+            <li>주간 리포트 자동 이메일 발송</li>
+            <li>학습 목표 설정 & 달성 알림</li>
+          </ul>
+          <span class="tag tag-low">개선</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 6 -->
+    <section id="phase6" class="phase phase-6">
+      <div class="phase-header">
+        <div class="phase-number">6</div>
+        <h2 class="phase-title">수익화 & 지속 가능성</h2>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">💎</div>
+          <h3>프리미엄 플랜</h3>
+          <p>무료/유료 차등 서비스</p>
+          <ul>
+            <li>무료: 일 20문제, 기본 던전, 광고</li>
+            <li>프리미엄: 무제한, 모든 던전, 광고 제거, AI 튜터</li>
+            <li>학교/학원 플랜: 관리자 대시보드 + 대량 라이선스</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon">🎨</div>
+          <h3>인앱 결제 (코스메틱)</h3>
+          <p>전투 능력에 영향 없는 꾸미기 요소</p>
+          <ul>
+            <li>캐릭터 스킨, 펫 외형, 이펙트</li>
+            <li>편의 아이템 (인벤토리 확장, 부스트)</li>
+            <li>P2W 방지 원칙 준수</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon">🤝</div>
+          <h3>교육 기관 파트너십</h3>
+          <p>B2B 수익원 확보</p>
+          <ul>
+            <li>교과서 출판사 연동 (단원별 문제 DB)</li>
+            <li>학교 시스템(NEIS 등) 연동</li>
+            <li>교육청/EBS 콘텐츠 제휴</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tech Improvements -->
+    <section id="tech" class="phase">
+      <div class="phase-header">
+        <div class="phase-number" style="background: linear-gradient(135deg, #475569, #64748b);">⚙️</div>
+        <h2 class="phase-title">기술 개선 사항</h2>
+      </div>
+      <div class="tech-grid">
+        <div class="tech-card">
+          <h4>🏗️ 인프라</h4>
+          <ul>
+            <li>WebSocket 실시간 통신</li>
+            <li>Cloudflare R2 이미지 저장소</li>
+            <li>Redis 캐싱 (리더보드)</li>
+            <li>CI/CD 파이프라인 (GitHub Actions)</li>
+          </ul>
+        </div>
+        <div class="tech-card">
+          <h4>🖥️ 프론트엔드</h4>
+          <ul>
+            <li>Canvas → React/Svelte 전환</li>
+            <li>PWA Service Worker 구현</li>
+            <li>접근성(a11y) 개선</li>
+            <li>Lottie/Spine 애니메이션</li>
+          </ul>
+        </div>
+        <div class="tech-card">
+          <h4>⚡ 백엔드</h4>
+          <ul>
+            <li>API Rate Limiting</li>
+            <li>오프라인 동기화 큐</li>
+            <li>데이터 무결성 검증</li>
+            <li>로그/모니터링 시스템</li>
+          </ul>
+        </div>
+        <div class="tech-card">
+          <h4>🔒 보안</h4>
+          <ul>
+            <li>API 키 암호화 강화</li>
+            <li>XSS/CSRF 방어</li>
+            <li>문제 데이터 암호화</li>
+            <li>Rate Limiting (남용 방지)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Priority Table -->
+    <section id="priority" class="priority-section">
+      <h2>📋 우선순위</h2>
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th>순위</th>
+            <th>기능</th>
+            <th>이유</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rank-1">🥇 1</td>
+            <td>오답노트 & 복습 시스템</td>
+            <td>학습 효과 극대화, 핵심 가치</td>
+          </tr>
+          <tr>
+            <td class="rank-2">🥈 2</td>
+            <td>과목 확장 (영어, 국어)</td>
+            <td>사용자층 확대</td>
+          </tr>
+          <tr>
+            <td class="rank-3">🥉 3</td>
+            <td>업적 & 일일 미션</td>
+            <td>재방문율 향상</td>
+          </tr>
+          <tr>
+            <td class="rank-other">4</td>
+            <td>리더보드</td>
+            <td>경쟁 동기 부여</td>
+          </tr>
+          <tr>
+            <td class="rank-other">5</td>
+            <td>PWA 오프라인 모드</td>
+            <td>접근성 향상</td>
+          </tr>
+          <tr>
+            <td class="rank-other">6</td>
+            <td>장비 & 스킬 시스템</td>
+            <td>게임성 깊이 추가</td>
+          </tr>
+          <tr>
+            <td class="rank-other">7</td>
+            <td>AI 학습 분석</td>
+            <td>차별화 포인트</td>
+          </tr>
+          <tr>
+            <td class="rank-other">8</td>
+            <td>대전 모드</td>
+            <td>바이럴 성장</td>
+          </tr>
+          <tr>
+            <td class="rank-other">9</td>
+            <td>관리자 대시보드</td>
+            <td>B2B 수익화</td>
+          </tr>
+          <tr>
+            <td class="rank-other">10</td>
+            <td>네이티브 앱 전환</td>
+            <td>장기 성장</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div>
+
+  <footer class="footer">
+    오답헌터 발전 방향 로드맵 &mdash; 2026.02.02 작성
+  </footer>
+
+</body>
+</html>

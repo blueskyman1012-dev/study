@@ -6,7 +6,9 @@ export const SCREENS = {
   SHOP: 'shop',
   REGISTER: 'register',
   DUNGEON_SELECT: 'dungeon_select',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  STATS: 'stats',
+  ACHIEVEMENT: 'achievement'
 };
 
 // 게임 설정
@@ -35,7 +37,8 @@ export const LEVEL_CONFIG = {
   expPerNormalBoss: 50,    // 일반 보스 처치 시 경험치
   expPerMidBoss: 150,      // 중간 보스 처치 시 경험치
   expPerFinalBoss: 350,    // 최종 보스 처치 시 경험치
-  maxLevel: 99             // 최대 레벨
+  maxLevel: 100,           // 실제 최대 레벨
+  displayMaxLevel: 99      // UI에 표시되는 최대 레벨
 };
 
 // 보스 설정
@@ -46,7 +49,7 @@ export const BOSS_CONFIG = {
     damageMultiplier: 1.5,
     goldMultiplier: 3,
     icon: '👹',
-    name: '보스'
+    nameKey: 'boss'
   },
   MID_BOSS: {
     stages: [50],  // 중간 보스 층
@@ -54,7 +57,7 @@ export const BOSS_CONFIG = {
     damageMultiplier: 2,
     goldMultiplier: 5,
     icon: '👿',
-    name: '중간보스'
+    nameKey: 'midBoss'
   },
   FINAL_BOSS: {
     stages: [100],  // 최종 보스 층
@@ -62,7 +65,7 @@ export const BOSS_CONFIG = {
     damageMultiplier: 2.5,
     goldMultiplier: 10,
     icon: '🐉',
-    name: '최종보스'
+    nameKey: 'finalBoss'
   }
 };
 
@@ -84,18 +87,18 @@ export const COLORS = {
 
 // 과목
 export const SUBJECTS = {
-  MATH: { id: 'math', name: '수학', icon: '📐', color: '#6366f1' },
-  ENGLISH: { id: 'english', name: '영어', icon: '📖', color: '#22c55e' },
-  KOREAN: { id: 'korean', name: '국어', icon: '📚', color: '#ef4444' },
-  SCIENCE: { id: 'science', name: '과학', icon: '🔬', color: '#fbbf24' }
+  MATH: { id: 'math', nameKey: 'math', icon: '📐', color: '#6366f1' },
+  ENGLISH: { id: 'english', nameKey: 'english', icon: '📖', color: '#22c55e' },
+  KOREAN: { id: 'korean', nameKey: 'korean', icon: '📚', color: '#ef4444' },
+  SCIENCE: { id: 'science', nameKey: 'science', icon: '🔬', color: '#fbbf24' }
 };
 
 // 희귀도 (아이템 드랍 시 등급 확률)
 export const RARITY = {
-  NORMAL: { id: 'normal', name: '일반', color: '#ffffff', dropRate: 0.45 },
-  RARE: { id: 'rare', name: '레어', color: '#3b82f6', dropRate: 0.35 },
-  EPIC: { id: 'epic', name: '에픽', color: '#a855f7', dropRate: 0.17 },
-  LEGENDARY: { id: 'legendary', name: '전설', color: '#fbbf24', dropRate: 0.03 }
+  NORMAL: { id: 'normal', nameKey: 'rarityNormal', color: '#ffffff', dropRate: 0.45 },
+  RARE: { id: 'rare', nameKey: 'rarityRare', color: '#3b82f6', dropRate: 0.35 },
+  EPIC: { id: 'epic', nameKey: 'rarityEpic', color: '#a855f7', dropRate: 0.17 },
+  LEGENDARY: { id: 'legendary', nameKey: 'rarityLegendary', color: '#fbbf24', dropRate: 0.03 }
 };
 
 // 드랍 확률
@@ -107,36 +110,36 @@ export const DROP_RATES = {
 // 영구 강화 설정
 export const UPGRADES = {
   hp: {
-    name: 'HP 강화',
+    nameKey: 'hpUpgrade',
     icon: '❤️',
-    description: '최대 HP +15',
+    descKey: 'hpUpgradeDesc',
     basePrice: 500,
     priceIncrease: 300,  // 단계당 가격 증가
     maxLevel: 10,
     value: 15
   },
   time: {
-    name: '시간 강화',
+    nameKey: 'timeUpgrade',
     icon: '⏱️',
-    description: '제한 시간 +3초',
+    descKey: 'timeUpgradeDesc',
     basePrice: 800,
     priceIncrease: 500,
     maxLevel: 5,
     value: 3
   },
   goldBonus: {
-    name: '골드 보너스',
+    nameKey: 'goldBonus',
     icon: '💰',
-    description: '골드 획득 +15%',
+    descKey: 'goldBonusDesc',
     basePrice: 1000,
     priceIncrease: 800,
     maxLevel: 5,
     value: 15
   },
   damage: {
-    name: '공격력 강화',
+    nameKey: 'damageUpgrade',
     icon: '⚔️',
-    description: '기본 데미지 +10',
+    descKey: 'damageUpgradeDesc',
     basePrice: 900,
     priceIncrease: 1000,
     maxLevel: 10,
@@ -148,30 +151,108 @@ export const UPGRADES = {
 export const SHOP_ITEMS = {
   reviveTicket: {
     id: 'reviveTicket',
-    name: '부활권',
+    nameKey: 'reviveTicket',
     icon: '🪶',
-    description: '사망 시 HP 50% 회복 후 부활',
-    price: 500
+    descKey: 'reviveTicketDesc',
+    price: 500,
+    hintKey: 'reviveTicketHint'
   },
   hintTicket: {
     id: 'hintTicket',
-    name: '힌트권',
+    nameKey: 'hintTicket',
     icon: '💡',
-    description: '힌트 1회 무료 사용',
-    price: 100
+    descKey: 'hintTicketDesc',
+    price: 100,
+    hintKey: 'hintTicketHint'
   },
   timeBoost: {
     id: 'timeBoost',
-    name: '시간 연장',
+    nameKey: 'timeBoost',
     icon: '⏰',
-    description: '전투 중 사용 시 현재 문제 +60초',
-    price: 200
+    descKey: 'timeBoostDesc',
+    price: 200,
+    hintKey: 'timeBoostHint'
   },
   doubleGold: {
     id: 'doubleGold',
-    name: '골드 2배',
+    nameKey: 'doubleGold',
     icon: '✨',
-    description: '다음 런 골드 획득 2배',
-    price: 500
-  }
+    descKey: 'doubleGoldDesc',
+    price: 500,
+    hintKey: 'doubleGoldHint'
+  },
+  randomBg: {
+    id: 'randomBg',
+    nameKey: 'randomBg',
+    icon: '🎨',
+    descKey: 'randomBgDesc',
+    price: 1
+  },
 };
+
+// 업적 정의
+export const ACHIEVEMENTS = [
+  { id: 'combo_3', nameKey: 'achv_combo_3', descKey: 'achv_combo_3_desc', icon: '🔥', category: 'combo', condition: { type: 'combo', value: 10 }, reward: 50 },
+  { id: 'combo_5', nameKey: 'achv_combo_5', descKey: 'achv_combo_5_desc', icon: '🔥', category: 'combo', condition: { type: 'combo', value: 20 }, reward: 100 },
+  { id: 'combo_10', nameKey: 'achv_combo_10', descKey: 'achv_combo_10_desc', icon: '🔥', category: 'combo', condition: { type: 'combo', value: 50 }, reward: 300 },
+  { id: 'combo_20', nameKey: 'achv_combo_20', descKey: 'achv_combo_20_desc', icon: '🔥', category: 'combo', condition: { type: 'combo', value: 100 }, reward: 1000 },
+  { id: 'combo_500', nameKey: 'achv_combo_500', descKey: 'achv_combo_500_desc', icon: '🔥', category: 'combo', condition: { type: 'combo', value: 500 }, reward: 5000 },
+  { id: 'first_clear', nameKey: 'achv_first_clear', descKey: 'achv_first_clear_desc', icon: '⭐', category: 'run', condition: { type: 'clear', value: 1 }, reward: 200, rewardExp: 30 },
+  { id: 'clear_10', nameKey: 'achv_clear_10', descKey: 'achv_clear_10_desc', icon: '⭐', category: 'run', condition: { type: 'clear', value: 20 }, reward: 500, rewardExp: 80 },
+  { id: 'clear_50', nameKey: 'achv_clear_50', descKey: 'achv_clear_50_desc', icon: '⭐', category: 'run', condition: { type: 'clear', value: 80 }, reward: 2000, rewardExp: 200 },
+  { id: 'perfect_run', nameKey: 'achv_perfect_run', descKey: 'achv_perfect_run_desc', icon: '💎', category: 'run', condition: { type: 'perfect_run' }, reward: 1000, rewardExp: 150 },
+  { id: 'boss_normal', nameKey: 'achv_boss_normal', descKey: 'achv_boss_normal_desc', icon: '👹', category: 'boss', condition: { type: 'boss', value: 'NORMAL_BOSS' }, reward: 100, rewardExp: 50 },
+  { id: 'boss_mid', nameKey: 'achv_boss_mid', descKey: 'achv_boss_mid_desc', icon: '👿', category: 'boss', condition: { type: 'boss', value: 'MID_BOSS' }, reward: 300, rewardExp: 120 },
+  { id: 'boss_final', nameKey: 'achv_boss_final', descKey: 'achv_boss_final_desc', icon: '🐉', category: 'boss', condition: { type: 'boss', value: 'FINAL_BOSS' }, reward: 500, rewardExp: 300 },
+  { id: 'level_10', nameKey: 'achv_level_10', descKey: 'achv_level_10_desc', icon: '📈', category: 'level', condition: { type: 'level', value: 15 }, reward: 200 },
+  { id: 'level_25', nameKey: 'achv_level_25', descKey: 'achv_level_25_desc', icon: '📈', category: 'level', condition: { type: 'level', value: 35 }, reward: 500 },
+  { id: 'level_50', nameKey: 'achv_level_50', descKey: 'achv_level_50_desc', icon: '📈', category: 'level', condition: { type: 'level', value: 60 }, reward: 1500 },
+  { id: 'level_99', nameKey: 'achv_level_99', descKey: 'achv_level_99_desc', icon: '👑', category: 'level', condition: { type: 'level', value: 99 }, reward: 5000 },
+  { id: 'level_100', nameKey: 'achv_level_100', descKey: 'achv_level_100_desc', icon: '🌟', category: 'level', condition: { type: 'level', value: 100 }, reward: 10000, hidden: true },
+  { id: 'gold_1000', nameKey: 'achv_gold_1000', descKey: 'achv_gold_1000_desc', icon: '💰', category: 'gold', condition: { type: 'gold', value: 3000 }, reward: 100 },
+  { id: 'gold_10000', nameKey: 'achv_gold_10000', descKey: 'achv_gold_10000_desc', icon: '💰', category: 'gold', condition: { type: 'gold', value: 20000 }, reward: 500 },
+  { id: 'gold_100000', nameKey: 'achv_gold_100000', descKey: 'achv_gold_100000_desc', icon: '💰', category: 'gold', condition: { type: 'gold', value: 150000 }, reward: 3000 },
+  { id: 'kills_50', nameKey: 'achv_kills_50', descKey: 'achv_kills_50_desc', icon: '⚔️', category: 'kills', condition: { type: 'kills', value: 80 }, reward: 200 },
+  { id: 'kills_100', nameKey: 'achv_kills_100', descKey: 'achv_kills_100_desc', icon: '⚔️', category: 'kills', condition: { type: 'kills', value: 200 }, reward: 500 },
+  { id: 'kills_500', nameKey: 'achv_kills_500', descKey: 'achv_kills_500_desc', icon: '⚔️', category: 'kills', condition: { type: 'kills', value: 800 }, reward: 2000 },
+  { id: 'master_math', nameKey: 'achv_master_math', descKey: 'achv_master_math_desc', icon: '📐', category: 'subject', condition: { type: 'subject', value: 'math', count: 150 }, reward: 300 },
+  { id: 'master_science', nameKey: 'achv_master_science', descKey: 'achv_master_science_desc', icon: '🔬', category: 'subject', condition: { type: 'subject', value: 'science', count: 150 }, reward: 300 },
+  { id: 'answer_100', nameKey: 'achv_answer_100', descKey: 'achv_answer_100_desc', icon: '✅', category: 'study', condition: { type: 'answers', value: 200 }, reward: 200 },
+  { id: 'answer_500', nameKey: 'achv_answer_500', descKey: 'achv_answer_500_desc', icon: '✅', category: 'study', condition: { type: 'answers', value: 800 }, reward: 1000 },
+  { id: 'damage_100', nameKey: 'achv_damage_100', descKey: 'achv_damage_100_desc', icon: '⚔️', category: 'power', condition: { type: 'damage', value: 100 }, reward: 500, rewardBonusDamage: 1 },
+  { id: 'hp_500', nameKey: 'achv_hp_500', descKey: 'achv_hp_500_desc', icon: '❤️', category: 'power', condition: { type: 'hp', value: 500 }, reward: 500, rewardBonusHp: 1 },
+];
+
+// 일일 미션 풀
+export const DAILY_MISSIONS = [
+  // 난이도: ★☆☆ (쉬움)
+  { id: 'correct_10', nameKey: 'dm_correct_10', target: 10, event: 'correctAnswer', reward: { gold: 40, exp: 20 } },
+  { id: 'combo_5', nameKey: 'dm_combo_5', target: 5, event: 'combo', reward: { gold: 40, exp: 20 } },
+  { id: 'earn_100', nameKey: 'dm_earn_100', target: 100, event: 'goldEarned', reward: { gold: 30, exp: 15 } },
+  // 난이도: ★★☆ (보통)
+  { id: 'correct_20', nameKey: 'dm_correct_20', target: 20, event: 'correctAnswer', reward: { gold: 80, exp: 50 } },
+  { id: 'defeat_3', nameKey: 'dm_defeat_3', target: 3, event: 'monsterDefeated', reward: { gold: 70, exp: 40 } },
+  { id: 'combo_10', nameKey: 'dm_combo_10', target: 10, event: 'combo', reward: { gold: 80, exp: 50 } },
+  { id: 'answer_30', nameKey: 'dm_answer_30', target: 30, event: 'totalAnswers', reward: { gold: 70, exp: 40 } },
+  // 난이도: ★★★ (어려움)
+  { id: 'defeat_5', nameKey: 'dm_defeat_5', target: 5, event: 'monsterDefeated', reward: { gold: 120, exp: 80 } },
+  { id: 'earn_500', nameKey: 'dm_earn_500', target: 500, event: 'goldEarned', reward: { gold: 100, exp: 60 } },
+  { id: 'clear_1', nameKey: 'dm_clear_1', target: 1, event: 'dungeonClear', reward: { gold: 150, exp: 100 } },
+];
+
+// 주간 미션 풀
+export const WEEKLY_MISSIONS = [
+  // 난이도: ★☆☆ (쉬움)
+  { id: 'wm_correct_150', nameKey: 'wm_correct_150', target: 150, event: 'correctAnswer', reward: { gold: 250, exp: 150 } },
+  { id: 'wm_defeat_30', nameKey: 'wm_defeat_30', target: 30, event: 'monsterDefeated', reward: { gold: 300, exp: 180 } },
+  { id: 'wm_earn_3000', nameKey: 'wm_earn_3000', target: 3000, event: 'goldEarned', reward: { gold: 250, exp: 150 } },
+  // 난이도: ★★☆ (보통)
+  { id: 'wm_correct_300', nameKey: 'wm_correct_300', target: 300, event: 'correctAnswer', reward: { gold: 500, exp: 350 } },
+  { id: 'wm_defeat_50', nameKey: 'wm_defeat_50', target: 50, event: 'monsterDefeated', reward: { gold: 550, exp: 350 } },
+  { id: 'wm_combo_50', nameKey: 'wm_combo_50', target: 50, event: 'combo', reward: { gold: 450, exp: 300 } },
+  { id: 'wm_answer_200', nameKey: 'wm_answer_200', target: 200, event: 'totalAnswers', reward: { gold: 500, exp: 350 } },
+  // 난이도: ★★★ (어려움)
+  { id: 'wm_combo_100', nameKey: 'wm_combo_100', target: 100, event: 'combo', reward: { gold: 700, exp: 500 } },
+  { id: 'wm_earn_7000', nameKey: 'wm_earn_7000', target: 7000, event: 'goldEarned', reward: { gold: 800, exp: 600 } },
+  { id: 'wm_clear_7', nameKey: 'wm_clear_7', target: 7, event: 'dungeonClear', reward: { gold: 1000, exp: 700 } },
+];

@@ -1,8 +1,10 @@
 // SmilePrint Image-to-Text API 서비스
 // 문제 이미지 분석용
+import { apiService } from './ApiService.js';
+import { safeGetItem, safeSetItem } from '../utils/storage.js';
 
 const API_BASE_URL = 'https://caricature-api-rust.wizice.com';
-const DEFAULT_MODEL = 'gemini-2.0-flash-exp'; // gemini-3-flash-preview 사용 시 변경
+const DEFAULT_MODEL = 'gemini-2.0-flash';
 
 export class ImageAnalysisService {
   constructor() {
@@ -10,15 +12,21 @@ export class ImageAnalysisService {
     this.loadApiKey();
   }
 
-  // API 키 설정
+  // API 키 설정 (로컬 + 서버 저장)
   setApiKey(key) {
     this.apiKey = key;
-    localStorage.setItem('smileprint_api_key', key);
+    safeSetItem('smileprint_api_key', key);
+    // 로그인 상태면 서버에도 암호화 저장
+    if (apiService.isLoggedIn()) {
+      apiService.saveKey('smileprint_api_key', key).catch(err =>
+        console.warn('SmilePrint 키 서버 저장 실패:', err)
+      );
+    }
   }
 
   // 저장된 API 키 로드
   loadApiKey() {
-    this.apiKey = localStorage.getItem('smileprint_api_key');
+    this.apiKey = safeGetItem('smileprint_api_key');
     return this.apiKey;
   }
 
@@ -138,46 +146,90 @@ export class ImageAnalysisService {
     };
   }
 
-  // 분석 상태 확인
+  // 분석 상태 확인 (재시도 포함)
   async checkStatus(jobId, accessKey) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/analyze/status/${jobId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessKey}`
-      }
-    });
+    const maxRetries = 3;
+    let lastError = null;
 
-    if (!response.ok) {
-      throw new Error(`상태 확인 실패: ${response.status}`);
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/analyze/status/${jobId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessKey}`
+          }
+        });
+
+        if (!response.ok) {
+          // 4xx 클라이언트 오류는 재시도 불필요
+          if (response.status >= 400 && response.status < 500) {
+            throw new Error(`상태 확인 실패: ${response.status}`);
+          }
+          // 5xx 서버 오류는 재시도
+          throw new Error(`서버 오류: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (err) {
+        lastError = err;
+        // 클라이언트 오류(4xx)는 재시도하지 않음
+        if (err.message.includes('상태 확인 실패')) throw err;
+
+        if (retry < maxRetries - 1) {
+          const backoff = Math.pow(2, retry) * 1000; // 1s, 2s
+          console.warn(`🔄 상태 확인 재시도 ${retry + 1}/${maxRetries} (${backoff}ms 후):`, err.message);
+          await this.sleep(backoff);
+        }
+      }
     }
 
-    return await response.json();
+    throw new Error(`상태 확인 ${maxRetries}회 실패: ${lastError?.message || '알 수 없는 오류'}`);
   }
 
   // 완료까지 대기 (폴링)
   async waitForCompletion(jobId, accessKey, maxAttempts = 60, onProgress = null) {
+    let consecutiveErrors = 0;
+    const maxConsecutiveErrors = 5;
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await this.sleep(1000); // 1초 대기
+      // 첫 폴링은 짧게, 이후 점진적으로 늘림
+      const delay = attempt === 0 ? 300 : attempt < 5 ? 800 : 1500;
+      await this.sleep(delay);
 
-      const status = await this.checkStatus(jobId, accessKey);
+      try {
+        const status = await this.checkStatus(jobId, accessKey);
+        consecutiveErrors = 0; // 성공 시 초기화
 
-      if (onProgress) {
-        onProgress(status.progress || 0, status.status);
-      }
+        if (onProgress) {
+          onProgress(status.progress || 0, status.status);
+        }
 
-      console.log(`📊 상태: ${status.status}, 진행률: ${status.progress || 0}%`);
+        console.log(`📊 상태: ${status.status}, 진행률: ${status.progress || 0}%`);
 
-      if (status.status === 'completed') {
-        console.log('✅ 분석 완료!');
-        return status;
-      }
+        if (status.status === 'completed') {
+          console.log('✅ 분석 완료!');
+          return status;
+        }
 
-      if (status.status === 'failed') {
-        throw new Error(status.errorMessage || '분석 실패');
+        if (status.status === 'failed') {
+          throw new Error(status.errorMessage || '분석 실패');
+        }
+      } catch (err) {
+        // '분석 실패'는 서버가 명시적으로 실패 반환 - 재시도 불가
+        if (err.message === '분석 실패' || err.message.includes('분석 실패')) throw err;
+        // 상태 확인 실패(4xx)도 재시도 불가
+        if (err.message.includes('상태 확인 실패')) throw err;
+
+        consecutiveErrors++;
+        console.warn(`⚠️ 폴링 오류 ${consecutiveErrors}/${maxConsecutiveErrors}:`, err.message);
+
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          throw new Error(`연속 ${maxConsecutiveErrors}회 네트워크 오류로 중단: ${err.message}`);
+        }
       }
     }
 
-    throw new Error('분석 시간 초과');
+    throw new Error('분석 시간 초과 (최대 폴링 횟수 도달)');
   }
 
   // 이미지 분석 (전체 프로세스)

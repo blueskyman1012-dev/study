@@ -30,7 +30,11 @@ describe('Renderer', () => {
       measureText: vi.fn(() => ({ width: 100 })),
       drawImage: vi.fn(),
       save: vi.fn(),
-      restore: vi.fn()
+      restore: vi.fn(),
+      globalAlpha: 1,
+      createLinearGradient: vi.fn(() => ({
+        addColorStop: vi.fn()
+      }))
     };
 
     Renderer.init(mockCtx, 400, 700);
@@ -60,21 +64,27 @@ describe('Renderer', () => {
   });
 
   describe('그리드 패턴', () => {
-    it('RND-GRID-001: drawGrid()가 그리드 라인을 그려야 한다', () => {
+    it('RND-GRID-001: drawGrid()가 오프스크린 캐시를 생성하고 메인 캔버스에 그려야 한다', () => {
+      Renderer._gridCache = null;
+      Renderer._bgImage = null;
       Renderer.drawGrid();
 
-      // 40px 간격으로 그리드 라인
-      expect(mockCtx.beginPath).toHaveBeenCalled();
-      expect(mockCtx.moveTo).toHaveBeenCalled();
-      expect(mockCtx.lineTo).toHaveBeenCalled();
-      expect(mockCtx.stroke).toHaveBeenCalled();
+      // 오프스크린 캔버스에 캐싱 후 메인 캔버스에 drawImage로 블릿
+      expect(mockCtx.drawImage).toHaveBeenCalled();
+      expect(Renderer._gridCache).not.toBeNull();
     });
 
-    it('RND-GRID-002: 그리드 스타일이 올바르게 설정되어야 한다', () => {
+    it('RND-GRID-002: drawGrid()가 캐시된 그리드를 재사용해야 한다', () => {
+      Renderer._gridCache = null;
+      Renderer._bgImage = null;
       Renderer.drawGrid();
+      const cache = Renderer._gridCache;
+      mockCtx.drawImage.mockClear();
 
-      expect(mockCtx.strokeStyle).toBe('rgba(99, 102, 241, 0.05)');
-      expect(mockCtx.lineWidth).toBe(1);
+      // 두 번째 호출 시 캐시 재사용
+      Renderer.drawGrid();
+      expect(Renderer._gridCache).toBe(cache);
+      expect(mockCtx.drawImage).toHaveBeenCalled();
     });
   });
 
@@ -116,8 +126,8 @@ describe('Renderer', () => {
       const fillCalls = mockCtx.fill.mock.calls.length;
       Renderer.drawHPBar(10, 20, 100, 10, 0, 100);
 
-      // 배경만 그려짐 (1회)
-      expect(mockCtx.fill.mock.calls.length - fillCalls).toBe(1);
+      // 배경 2개 (메인 배경 + 입체감 배경), HP 바 없음
+      expect(mockCtx.fill.mock.calls.length - fillCalls).toBe(2);
     });
 
     it('RND-HP-003: HP가 최대값을 초과해도 100%로 제한되어야 한다', () => {
@@ -128,7 +138,8 @@ describe('Renderer', () => {
 
     it('RND-HP-004: 커스텀 색상을 사용할 수 있어야 한다', () => {
       Renderer.drawHPBar(10, 20, 100, 10, 50, 100, '#FF0000');
-      expect(mockCtx.fillStyle).toBe('#FF0000');
+      // 그라데이션이 createLinearGradient로 생성됨
+      expect(mockCtx.createLinearGradient).toHaveBeenCalled();
     });
   });
 
@@ -136,7 +147,7 @@ describe('Renderer', () => {
     it('RND-TXT-001: drawText()가 기본 옵션으로 텍스트를 그려야 한다', () => {
       Renderer.drawText('테스트', 100, 200);
 
-      expect(mockCtx.font).toBe('14px system-ui');
+      expect(mockCtx.font).toBe('14px Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif');
       expect(mockCtx.fillStyle).toBe(COLORS.TEXT_PRIMARY);
       expect(mockCtx.textAlign).toBe('left');
       expect(mockCtx.textBaseline).toBe('top');
@@ -151,7 +162,7 @@ describe('Renderer', () => {
         baseline: 'middle'
       });
 
-      expect(mockCtx.font).toBe('bold 20px Arial');
+      expect(mockCtx.font).toBe('bold 20px Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif');
       expect(mockCtx.fillStyle).toBe('#FF0000');
       expect(mockCtx.textAlign).toBe('center');
       expect(mockCtx.textBaseline).toBe('middle');

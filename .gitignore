@@ -2,3 +2,6 @@ tmpclaude-*
 nul
 node_modules/
 .claude/
+*.secret
+*_token.txt
+*_client_id.txt

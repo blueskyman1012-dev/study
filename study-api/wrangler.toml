@@ -1,0 +1,13 @@
+name = "study-api"
+main = "src/index.js"
+compatibility_date = "2026-01-31"
+account_id = "49225a4bb22b1889f807790e26b324b7"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "odap-hunter-db"
+database_id = "2b819d38-31fd-4f78-804e-6813ee503be3"
+
+[vars]
+CORS_ORIGIN = "https://study-bhi.pages.dev"
+GOOGLE_CLIENT_ID = "907312801581-6ddqujogiq9sanjd18ah9vs7pr5vmuo3.apps.googleusercontent.com"

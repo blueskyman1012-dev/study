@@ -2,17 +2,30 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#6366f1">
   <title>오답헌터</title>
   <link rel="stylesheet" href="/src/style.css">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <div id="game-container">
+  <!-- 로그인 화면 -->
+  <div id="login-screen">
+    <div id="login-box">
+      <h1>오답헌터</h1>
+      <p>오답을 잡아 레벨업하자!</p>
+      <div id="google-login-btn"></div>
+      <div id="login-status"></div>
+    </div>
+  </div>
+
+  <div id="game-container" style="display:none;">
     <canvas id="gameCanvas"></canvas>
     <!-- 오답등록 버튼 -->
     <button id="register-btn">📸 오답 등록</button>
+    <!-- 로그아웃 버튼 -->
+    <button id="logout-btn">로그아웃</button>
   </div>
 
   <!-- iOS용 파일 입력 -->

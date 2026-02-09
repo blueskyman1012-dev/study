@@ -3,7 +3,14 @@ import { Database } from './data/Database.js';
 import { Game } from './game/Game.js';
 import { Renderer } from './canvas/Renderer.js';
 import { GAME_CONFIG, SCREENS } from './utils/constants.js';
+import { apiService } from './services/ApiService.js';
+import { geminiService } from './services/GeminiService.js';
+import { imageAnalysisService } from './services/ImageAnalysisService.js';
+import { t, applyToHTML } from './i18n/i18n.js';
+import { safeGetItem, safeSetItem, safeRemoveItem } from './utils/storage.js';
 import './style.css';
+
+const API_URL = 'https://study-api.blueskyman1012.workers.dev';
 
 class App {
   constructor() {
@@ -18,10 +25,135 @@ class App {
     this.captureCanvas = null;
     this.mediaStream = null;
     this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.sessionToken = null;
+    this.currentUser = null;
+    this.lastSyncTime = 0;
   }
 
   async init() {
     console.log('🎮 오답헌터 초기화 중...');
+
+    // 로그아웃 버튼 (항상 등록)
+    document.getElementById('logout-btn').addEventListener('click', () => this.logout());
+
+    // 기존 세션 확인
+    this.sessionToken = safeGetItem('session_token');
+    if (this.sessionToken) {
+      const valid = await this.verifySession();
+      if (valid) {
+        this.showGame();
+        return;
+      }
+      // 토큰 만료 → 다시 로그인
+      safeRemoveItem('session_token');
+      this.sessionToken = null;
+    }
+
+    // Google 로그인 화면 표시
+    this.initGoogleLogin();
+  }
+
+  initGoogleLogin() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('game-container').style.display = 'none';
+
+    // Google Identity Services 초기화
+    if (typeof google !== 'undefined' && google.accounts) {
+      this.renderGoogleButton();
+    } else {
+      // GIS 스크립트 로드 대기
+      const checkGoogle = setInterval(() => {
+        if (typeof google !== 'undefined' && google.accounts) {
+          clearInterval(checkGoogle);
+          this.renderGoogleButton();
+        }
+      }, 100);
+      // 5초 타임아웃
+      setTimeout(() => {
+        clearInterval(checkGoogle);
+        if (typeof google === 'undefined') {
+          document.getElementById('login-status').textContent = t('googleLoadFailed');
+        }
+      }, 5000);
+    }
+
+  }
+
+  renderGoogleButton() {
+    google.accounts.id.initialize({
+      client_id: '907312801581-6ddqujogiq9sanjd18ah9vs7pr5vmuo3.apps.googleusercontent.com',
+      callback: (response) => this.handleGoogleLogin(response)
+    });
+
+    google.accounts.id.renderButton(
+      document.getElementById('google-login-btn'),
+      { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ko', width: 280 }
+    );
+  }
+
+  async handleGoogleLogin(response) {
+    document.getElementById('login-status').textContent = t('loggingIn');
+    try {
+      const res = await fetch(`${API_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        this.sessionToken = data.sessionToken;
+        this.currentUser = data.user;
+        safeSetItem('session_token', data.sessionToken);
+        safeSetItem('user_name', data.user.name);
+        safeSetItem('user_picture', data.user.picture);
+        apiService.setToken(data.sessionToken);
+        this.showGame();
+      } else {
+        document.getElementById('login-status').textContent = data.error || t('loginFailed');
+      }
+    } catch (err) {
+      console.error('로그인 오류:', err);
+      document.getElementById('login-status').textContent = t('serverError');
+    }
+  }
+
+  async verifySession() {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${this.sessionToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.currentUser = data.user;
+        apiService.setToken(this.sessionToken);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  logout() {
+    this.sessionToken = null;
+    this.currentUser = null;
+    apiService.setToken(null);
+    safeRemoveItem('session_token');
+    safeRemoveItem('user_name');
+    safeRemoveItem('user_picture');
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('game-container').style.display = 'none';
+    document.getElementById('login-status').textContent = '';
+    // Google 로그인 버튼 다시 렌더링
+    if (typeof google !== 'undefined' && google.accounts) {
+      this.renderGoogleButton();
+    }
+  }
+
+  async showGame() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('game-container').style.display = 'flex';
 
     // Canvas 초기화
     this.canvas = document.getElementById('gameCanvas');
@@ -45,9 +177,37 @@ class App {
     // 로딩 화면
     this.showLoading();
 
-    // IndexedDB 초기화
+    // IndexedDB 초기화 (로컬 캐시용으로 유지)
     this.db = new Database();
     await this.db.open();
+
+    // 로그인 상태면 서버에서 데이터 다운로드
+    if (apiService.isLoggedIn()) {
+      try {
+        console.log('📥 서버 데이터 동기화 중...');
+        const [,,,keys] = await Promise.all([
+          apiService.downloadPlayerData(this.db),
+          apiService.downloadMonsters(this.db),
+          apiService.downloadRuns(this.db),
+          apiService.downloadKeys()
+        ]);
+        if (keys) {
+          if (keys.smileprint_api_key) {
+            imageAnalysisService.apiKey = keys.smileprint_api_key;
+            safeSetItem('smileprint_api_key', keys.smileprint_api_key);
+            console.log('🔑 SmilePrint API 키 복원됨');
+          }
+          if (keys.gemini_api_key) {
+            geminiService.apiKey = keys.gemini_api_key;
+            safeSetItem('gemini_api_key', keys.gemini_api_key);
+            console.log('🔑 Gemini API 키 복원됨');
+          }
+        }
+        console.log('✅ 서버 데이터 동기화 완료');
+      } catch (err) {
+        console.warn('서버 동기화 실패, 로컬 데이터 사용:', err.message);
+      }
+    }
 
     // 게임 초기화
     this.game = new Game(this.db);
@@ -55,6 +215,11 @@ class App {
 
     // 이벤트 리스너
     this.setupEvents();
+
+    // 버튼 레이아웃 캐싱 + resize 리스너
+    this._logoutBtn = document.getElementById('logout-btn');
+    this._updateButtonLayout();
+    window.addEventListener('resize', () => this._updateButtonLayout());
 
     // 게임 루프 시작
     this.gameLoop();
@@ -131,7 +296,7 @@ class App {
     } catch (err) {
       console.error('카메라 오류:', err);
       this.cameraModal.style.display = 'none';
-      alert('카메라를 열 수 없습니다: ' + err.message);
+      this.game.showModal(t('cameraError') + err.message);
     }
   }
 
@@ -228,19 +393,136 @@ class App {
     // 리사이즈
     window.addEventListener('resize', () => this.resizeCanvas());
 
-    // 클릭
-    this.canvas.addEventListener('click', (e) => this.handleInput(e));
+    // 클릭 (터치 직후 발생하는 click은 무시)
+    this.canvas.addEventListener('click', (e) => {
+      if (this._touchHandled) return;
+      this.handleInput(e);
+    });
+
+    // 마우스 드래그 (데스크탑 슬라이더)
+    this.canvas.addEventListener('mousedown', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = this.canvas.width / rect.width;
+      const scaleY = this.canvas.height / rect.height;
+      const canvasX = (e.clientX - rect.left) * scaleX;
+      const canvasY = (e.clientY - rect.top) * scaleY;
+      this.game.handleTouchStart(canvasX, canvasY);
+      if (this.game._dragging) {
+        this._mouseDragging = true;
+      }
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!this._mouseDragging) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = this.canvas.width / rect.width;
+      const canvasX = (e.clientX - rect.left) * scaleX;
+      this.game.handleTouchMove(canvasX, 0);
+    });
+    window.addEventListener('mouseup', () => {
+      if (!this._mouseDragging) return;
+      this._mouseDragging = false;
+      this.game.handleTouchEnd();
+    });
 
     // 터치
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      this.handleInput(e.touches[0]);
+      const touch = e.touches[0];
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = this.canvas.width / rect.width;
+      const scaleY = this.canvas.height / rect.height;
+      const canvasX = (touch.clientX - rect.left) * scaleX;
+      const canvasY = (touch.clientY - rect.top) * scaleY;
+      this.game.handleTouchStart(canvasX, canvasY);
+      this._pendingTouch = touch;
     }, { passive: false });
 
-    // 터치 이동 방지
+    // 터치 이동 (스크롤/드래그)
     this.canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
+      const touch = e.touches[0];
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = this.canvas.width / rect.width;
+      const scaleY = this.canvas.height / rect.height;
+      const canvasX = (touch.clientX - rect.left) * scaleX;
+      const canvasY = (touch.clientY - rect.top) * scaleY;
+      this.game.handleTouchMove(canvasX, canvasY);
     }, { passive: false });
+
+    // 터치 종료
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (this._pendingTouch && !this.game._isTouchScrolling) {
+        this.handleInput(this._pendingTouch);
+      }
+      this.game.handleTouchEnd();
+      this._pendingTouch = null;
+      // 터치 후 click 이벤트 억제
+      this._touchHandled = true;
+      setTimeout(() => { this._touchHandled = false; }, 300);
+    }, { passive: false });
+
+    // 탭 복귀 시 자동 동기화
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.syncFromServer();
+      }
+    });
+
+    // 마우스 휠 스크롤
+    this.canvas.addEventListener('wheel', (e) => {
+      if (this.game.scrollMaxY > 0) {
+        e.preventDefault();
+        this.game.scrollY = Math.max(0, Math.min(this.game.scrollMaxY, this.game.scrollY + e.deltaY * 0.5));
+        this.game.render();
+      }
+    }, { passive: false });
+
+    // 방향키 스크롤 + Android 뒤로가기
+    document.addEventListener('keydown', (e) => {
+      if (this.game.scrollMaxY > 0) {
+        const step = 40;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.game.scrollY = Math.min(this.game.scrollMaxY, this.game.scrollY + step);
+          this.game.render();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.game.scrollY = Math.max(0, this.game.scrollY - step);
+          this.game.render();
+        }
+      }
+    });
+
+    // Android 뒤로가기 (popstate)
+    history.pushState(null, '', location.href);
+    window.addEventListener('popstate', () => {
+      history.pushState(null, '', location.href);
+      const screen = this.game.currentScreen;
+      if (screen !== SCREENS.MAIN) {
+        this.game.changeScreen(SCREENS.MAIN);
+      }
+    });
+  }
+
+  async syncFromServer() {
+    if (!apiService.isLoggedIn()) return;
+    if (this.game && this.game.currentScreen === SCREENS.BATTLE) return;
+    if (Date.now() - this.lastSyncTime < 30000) return;
+
+    try {
+      console.log('🔄 탭 복귀 - 서버 동기화 중...');
+      await apiService.downloadPlayerData(this.db);
+      await apiService.downloadMonsters(this.db);
+      await apiService.downloadRuns(this.db);
+      await this.game.playerManager.loadPlayer();
+      await this.game.monsterManager.loadMonsters();
+      this.lastSyncTime = Date.now();
+      this.game.render();
+      console.log('✅ 탭 복귀 동기화 완료');
+    } catch (err) {
+      console.warn('탭 복귀 동기화 실패:', err.message);
+    }
   }
 
   handleInput(e) {
@@ -256,11 +538,18 @@ class App {
 
   showLoading() {
     Renderer.clear();
-    Renderer.drawText('로딩 중...', 200, 350, {
+    Renderer.drawText(t('loading'), 200, 350, {
       font: 'bold 24px system-ui',
       color: '#6366f1',
       align: 'center'
     });
+  }
+
+  _updateButtonLayout() {
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    this._cachedRect = rect;
+    this._cachedScale = rect.width / GAME_CONFIG.CANVAS_WIDTH;
   }
 
   gameLoop() {
@@ -269,19 +558,29 @@ class App {
 
     // 메인 화면에서만 오답등록 버튼 표시
     if (this.registerBtn) {
-      if (this.game.currentScreen === SCREENS.MAIN) {
+      const isMain = this.game.currentScreen === SCREENS.MAIN && this.game.guideStep === null && !this.game.isGenerating;
+      if (isMain) {
         this.registerBtn.classList.add('visible');
-        // 위치 재조정 (y: 385~445)
-        const rect = this.canvas.getBoundingClientRect();
-        const scale = rect.width / GAME_CONFIG.CANVAS_WIDTH;
-        this.registerBtn.style.left = `${rect.left + 20 * scale}px`;
-        this.registerBtn.style.top = `${rect.top + 385 * scale}px`;
-        this.registerBtn.style.width = `${360 * scale}px`;
-        this.registerBtn.style.height = `${60 * scale}px`;
-        this.registerBtn.style.fontSize = `${18 * scale}px`;
+        this.registerBtn.style.opacity = Renderer.getUiOpacity();
+        if (this._cachedRect) {
+          const s = this._cachedScale;
+          const r = this._cachedRect;
+          this.registerBtn.style.left = `${r.left + 20 * s}px`;
+          this.registerBtn.style.top = `${r.top + 390 * s}px`;
+          this.registerBtn.style.width = `${360 * s}px`;
+          this.registerBtn.style.height = `${65 * s}px`;
+          this.registerBtn.style.fontSize = `${20 * s}px`;
+        }
       } else {
         this.registerBtn.classList.remove('visible');
       }
+    }
+
+    // 메인 화면에서만 로그아웃 버튼 표시
+    if (this._logoutBtn) {
+      const isMain = this.game.currentScreen === SCREENS.MAIN;
+      this._logoutBtn.style.display = isMain ? '' : 'none';
+      if (isMain) this._logoutBtn.style.opacity = Renderer.getUiOpacity();
     }
 
     requestAnimationFrame(() => this.gameLoop());
@@ -291,7 +590,7 @@ class App {
 // 앱 시작 (폰트 로드 후)
 const app = new App();
 window.addEventListener('DOMContentLoaded', async () => {
-  // 폰트 로드 대기
+  applyToHTML();
   await document.fonts.ready;
   app.init();
 });

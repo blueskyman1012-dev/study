@@ -82,6 +82,11 @@ export class Database {
     return this._transaction(storeName, 'readwrite', (store) => store.delete(key));
   }
 
+  // 스토어 전체 삭제
+  async clear(storeName) {
+    return this._transaction(storeName, 'readwrite', (store) => store.clear());
+  }
+
   // 인덱스로 조회
   async getByIndex(storeName, indexName, value) {
     return this._transaction(storeName, 'readonly', (store) => {
