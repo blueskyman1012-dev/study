@@ -372,41 +372,86 @@ function renderSubjectTab(game, stats, ctx, startY) {
     y += subjH + 10;
   }
 
-  // ─── C. 유형(topic)별 오답 TOP8 ───
-  const wrongTopics = stats.wrongByTopic || {};
-  const correctTopics = stats.correctByTopic || {};
-  const allTopics = new Set([...Object.keys(wrongTopics), ...Object.keys(correctTopics)]);
+  // ─── C. 과목별 문제유형 상세 ───
+  const subjectTopics = stats.subjectTopics || {};
+  const subjectInfoC = {
+    math: SUBJECTS.MATH, english: SUBJECTS.ENGLISH,
+    korean: SUBJECTS.KOREAN, science: SUBJECTS.SCIENCE
+  };
 
-  if (allTopics.size > 0) {
-    const topicEntries = [...allTopics].map(topic => ({
-      topic,
-      correct: correctTopics[topic] || 0,
-      wrong: wrongTopics[topic] || 0
-    })).sort((a, b) => b.wrong - a.wrong).slice(0, 8);
+  for (const subj of subjectEntries) {
+    const topicMap = subjectTopics[subj.key];
+    if (!topicMap || Object.keys(topicMap).length === 0) continue;
 
-    const topicH = 45 + topicEntries.length * 28;
-    Renderer.drawGradientCard(20, y, 360, topicH, 14, '#1a1a28', '#151520');
-    Renderer.roundRect(20, y, 360, topicH, 14, null, 'rgba(168,85,247,0.2)');
-    Renderer.drawText('📝 ' + t('stats_topicAnalysis'), 40, y + 18, {
-      font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
+    const topicList = Object.entries(topicMap)
+      .map(([topic, d]) => ({
+        topic,
+        attempts: d.attempts || 0,
+        correct: d.correct || 0,
+        wrong: (d.attempts || 0) - (d.correct || 0)
+      }))
+      .filter(e => e.attempts > 0)
+      .sort((a, b) => b.attempts - a.attempts);
+
+    if (topicList.length === 0) continue;
+
+    const headerH = 38;
+    const rowH = 26;
+    const cardH = headerH + topicList.length * rowH + 8;
+
+    Renderer.drawGradientCard(20, y, 360, cardH, 14, '#1a1a28', '#151520');
+    Renderer.roundRect(20, y, 360, cardH, 14, null, `${subj.color}33`);
+
+    // 과목 헤더
+    Renderer.drawText(`${subj.icon} ${t(subj.nameKey)} ${t('stats_topicDetail') || '유형별'}`, 40, y + 14, {
+      font: 'bold 13px system-ui', color: subj.color
+    });
+    // 컬럼 헤더
+    Renderer.drawText(t('stats_colAttempts') || '횟수', 218, y + 16, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    Renderer.drawText(t('stats_colCorrectRate') || '정답률', 274, y + 16, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    Renderer.drawText(t('stats_colWrongRate') || '오답률', 340, y + 16, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
     });
 
-    let ty = y + 42;
-    for (const entry of topicEntries) {
-      const label = entry.topic.length > 10 ? entry.topic.substring(0, 10) + '..' : entry.topic;
-      const totalT = entry.correct + entry.wrong;
-      const wrongRate = totalT > 0 ? Math.round((entry.wrong / totalT) * 100) : 0;
+    let ty = y + headerH;
+    for (const entry of topicList) {
+      const label = entry.topic.length > 8 ? entry.topic.substring(0, 8) + '..' : entry.topic;
+      const correctRate = Math.round((entry.correct / entry.attempts) * 100);
+      const wrongRate = 100 - correctRate;
 
-      Renderer.drawText(label, 40, ty, { font: '11px system-ui', color: COLORS.TEXT_PRIMARY });
-      Renderer.drawText(`✅${entry.correct}`, 210, ty, { font: '10px system-ui', color: COLORS.SUCCESS, align: 'center' });
-      Renderer.drawText(`❌${entry.wrong}`, 270, ty, { font: '10px system-ui', color: COLORS.DANGER, align: 'center' });
-      Renderer.drawText(`${wrongRate}%`, 355, ty, {
-        font: 'bold 10px system-ui', color: wrongRate >= 50 ? COLORS.DANGER : COLORS.WARNING, align: 'right'
+      // 유형명
+      Renderer.drawText(label, 40, ty + 2, {
+        font: '11px system-ui', color: COLORS.TEXT_PRIMARY
       });
 
-      ty += 28;
+      // 미니 바 (정답/오답 비율)
+      const barX = 135;
+      const barW = 60;
+      const correctW = Math.max(0, barW * correctRate / 100);
+      Renderer.roundRect(barX, ty, barW, 8, 4, 'rgba(255,255,255,0.06)');
+      if (correctW > 0) Renderer.roundRect(barX, ty, Math.max(2, correctW), 8, 4, COLORS.SUCCESS);
+      if (correctW < barW) Renderer.roundRect(barX + correctW, ty, Math.max(2, barW - correctW), 8, 4, COLORS.DANGER);
+
+      // 푼 횟수
+      Renderer.drawText(`${entry.attempts}`, 218, ty + 2, {
+        font: 'bold 11px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center'
+      });
+      // 정답률
+      Renderer.drawText(`${correctRate}%`, 274, ty + 2, {
+        font: 'bold 11px system-ui', color: correctRate >= 70 ? COLORS.SUCCESS : COLORS.WARNING, align: 'center'
+      });
+      // 오답률
+      Renderer.drawText(`${wrongRate}%`, 340, ty + 2, {
+        font: 'bold 11px system-ui', color: wrongRate >= 50 ? COLORS.DANGER : COLORS.TEXT_SECONDARY, align: 'center'
+      });
+
+      ty += rowH;
     }
-    y += topicH + 10;
+    y += cardH + 10;
   }
 
   const totalContentHeight = y + 40;

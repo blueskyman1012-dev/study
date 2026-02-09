@@ -281,9 +281,9 @@ export class EffectSystem {
       text: `-${damage}`,
       color,
       fontSize,
-      speed: 2,
-      life: 800,
-      maxLife: 800,
+      speed: 0.8,
+      life: 2000,
+      maxLife: 2000,
       alpha: 1,
       scale: 1,
       glow

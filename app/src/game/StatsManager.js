@@ -49,6 +49,7 @@ export class StatsManager {
       wrongByTopic: {},
       correctByTopic: {},
       wrongByDifficulty: {},
+      subjectTopics: {},   // { math: { '인수분해': { attempts:0, correct:0 }, ... }, ... }
 
       // 새 메트릭
       winRate: 0,
@@ -213,6 +214,17 @@ export class StatsManager {
       if (stats.difficultyAccuracy[diff]) {
         stats.difficultyAccuracy[diff].attempts += (m.stats?.attempts || 0);
         stats.difficultyAccuracy[diff].correct += (m.stats?.correct || 0);
+      }
+
+      // 과목별 유형(topic) 통계
+      const topic = m.topic;
+      if (topic) {
+        if (!stats.subjectTopics[subj]) stats.subjectTopics[subj] = {};
+        if (!stats.subjectTopics[subj][topic]) {
+          stats.subjectTopics[subj][topic] = { attempts: 0, correct: 0 };
+        }
+        stats.subjectTopics[subj][topic].attempts += (m.stats?.attempts || 0);
+        stats.subjectTopics[subj][topic].correct += (m.stats?.correct || 0);
       }
     }
 

@@ -488,7 +488,8 @@ class App {
     // 터치 종료
     this.canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
-      if (this._pendingTouch && !this.game._isTouchScrolling) {
+      const wasDragging = !!this.game._dragging;
+      if (this._pendingTouch && !this.game._isTouchScrolling && !wasDragging) {
         this.handleInput(this._pendingTouch);
       }
       this.game.handleTouchEnd();
@@ -514,8 +515,27 @@ class App {
       }
     }, { passive: false });
 
-    // 방향키 스크롤 + Android 뒤로가기
+    // 방향키 스크롤 + ESC/Backspace 뒤로가기 + Android 뒤로가기
     document.addEventListener('keydown', (e) => {
+      const isBack = e.key === 'Escape' ||
+        (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName));
+      if (isBack) {
+        e.preventDefault();
+        // 레벨진척도 모달 닫기
+        const levelModal = document.getElementById('level-modal');
+        if (levelModal) { levelModal.remove(); return; }
+        // 일반 모달 닫기
+        const customModal = document.getElementById('custom-modal');
+        if (customModal) { customModal.click(); return; }
+        // 서브 화면 → 메인 화면
+        const screen = this.game.currentScreen;
+        if (screen === SCREENS.STATS || screen === SCREENS.SETTINGS ||
+            screen === SCREENS.SHOP || screen === SCREENS.ACHIEVEMENT ||
+            screen === SCREENS.DUNGEON_SELECT) {
+          this.game.changeScreen(SCREENS.MAIN);
+        }
+        return;
+      }
       if (this.game.scrollMaxY > 0) {
         const step = 40;
         if (e.key === 'ArrowDown') {
