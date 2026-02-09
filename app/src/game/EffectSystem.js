@@ -263,14 +263,13 @@ export class EffectSystem {
 
   addDamageText(x, y, damage, isPlayerDamage = false) {
     let color = isPlayerDamage ? '#ef4444' : '#fbbf24';
-    let fontSize = isPlayerDamage ? 24 : 20;
-    let glow = false;
+    let fontSize = isPlayerDamage ? 60 : 50;  // 2.5배 확대 (24→60, 20→50)
+    let glow = true;
 
     if (!isPlayerDamage && this._cosmetics) {
       const style = this._cosmetics.damageTextStyle || 'default';
       if (style === 'neon') {
         color = '#00ffff';
-        glow = true;
       } else if (style === 'pixel') {
         fontSize = Math.round(fontSize * 1.4);
       }
@@ -281,7 +280,7 @@ export class EffectSystem {
       text: `-${damage}`,
       color,
       fontSize,
-      speed: 0.8,
+      speed: 0.6,
       life: 2000,
       maxLife: 2000,
       alpha: 1,

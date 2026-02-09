@@ -527,12 +527,11 @@ class App {
         // 일반 모달 닫기
         const customModal = document.getElementById('custom-modal');
         if (customModal) { customModal.click(); return; }
-        // 서브 화면 → 메인 화면
+        // 서브 화면 → 메인 화면 (전투/결과 제외 모든 화면)
         const screen = this.game.currentScreen;
-        if (screen === SCREENS.STATS || screen === SCREENS.SETTINGS ||
-            screen === SCREENS.SHOP || screen === SCREENS.ACHIEVEMENT ||
-            screen === SCREENS.DUNGEON_SELECT) {
+        if (screen !== SCREENS.MAIN && screen !== SCREENS.BATTLE && screen !== SCREENS.RESULT) {
           this.game.changeScreen(SCREENS.MAIN);
+          this.game.render();
         }
         return;
       }
