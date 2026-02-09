@@ -42,7 +42,7 @@ export class GeminiService {
     }
 
     // base64 추출
-    const base64Data = imageData.split(',')[1];
+    const base64Data = imageData.includes(',') ? imageData.split(',')[1] : imageData;
 
     // MIME 타입 감지
     let mimeType = 'image/jpeg';

@@ -89,7 +89,7 @@ export class AchievementManager {
     return Math.abs(hash);
   }
 
-  unlock(id) {
+  async unlock(id) {
     if (this.player.achievements[id]) return;
     const achv = ACHIEVEMENTS.find(a => a.id === id);
     if (!achv) return;
@@ -98,7 +98,7 @@ export class AchievementManager {
     this.player.gold += achv.reward;
 
     if (achv.rewardExp) {
-      this.game.playerManager.gainExp(achv.rewardExp);
+      await this.game.playerManager.gainExp(achv.rewardExp);
     }
     if (achv.rewardBonusDamage) {
       this.player.achievementBonusDamage = (this.player.achievementBonusDamage || 0) + achv.rewardBonusDamage;
@@ -113,11 +113,11 @@ export class AchievementManager {
       this.game.effects.showAchievementUnlock(achv);
     }
 
-    this.game.playerManager.save();
+    await this.game.playerManager.save();
     console.log(`🏆 업적 해제: ${achv.id} (+${achv.reward}G${achv.rewardExp ? ` +${achv.rewardExp}EXP` : ''})`);
   }
 
-  claimDailyReward(index) {
+  async claimDailyReward(index) {
     const missions = this.player.dailyMissions?.missions;
     if (!missions || !missions[index]) return false;
     const mission = missions[index];
@@ -125,12 +125,12 @@ export class AchievementManager {
 
     mission.claimed = true;
     if (mission.reward.gold) this.player.gold += mission.reward.gold;
-    if (mission.reward.exp) this.game.playerManager.gainExp(mission.reward.exp);
-    this.game.playerManager.save();
+    if (mission.reward.exp) await this.game.playerManager.gainExp(mission.reward.exp);
+    await this.game.playerManager.save();
     return true;
   }
 
-  claimWeeklyReward(index) {
+  async claimWeeklyReward(index) {
     const missions = this.player.weeklyMissions?.missions;
     if (!missions || !missions[index]) return false;
     const mission = missions[index];
@@ -138,8 +138,8 @@ export class AchievementManager {
 
     mission.claimed = true;
     if (mission.reward.gold) this.player.gold += mission.reward.gold;
-    if (mission.reward.exp) this.game.playerManager.gainExp(mission.reward.exp);
-    this.game.playerManager.save();
+    if (mission.reward.exp) await this.game.playerManager.gainExp(mission.reward.exp);
+    await this.game.playerManager.save();
     return true;
   }
 

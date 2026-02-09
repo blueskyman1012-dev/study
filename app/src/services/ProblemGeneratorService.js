@@ -259,7 +259,7 @@ ${answerRule}
 
     // Canvas를 Blob으로 변환
     const dataURL = canvas.toDataURL('image/png');
-    const byteString = atob(dataURL.split(',')[1]);
+    const byteString = atob(dataURL.includes(',') ? dataURL.split(',')[1] : dataURL);
     const mimeString = 'image/png';
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);

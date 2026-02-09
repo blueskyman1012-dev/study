@@ -375,6 +375,7 @@ export class MonsterManager {
   // 다른 몬스터들의 문제를 가져와 questions 배열 확보
   fillQuestionsFromOtherMonsters(currentMonster) {
     if (!currentMonster || !this.monsters || this.monsters.length <= 1) return;
+    if (!currentMonster.questions) currentMonster.questions = [];
 
     const currentId = currentMonster.id;
     const otherMonsters = this.monsters.filter(m => m.id !== currentId);
@@ -404,6 +405,7 @@ export class MonsterManager {
 
   // AI로 문제 자동 생성 (백그라운드)
   async autoGenerateQuestions(monster) {
+    if (!monster.questions) monster.questions = [];
     try {
       console.log('🤖 문제 부족! AI 자동 생성 중...');
       let problems = null;

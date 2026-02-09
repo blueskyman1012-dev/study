@@ -272,7 +272,7 @@ export class BattleManager {
       this.player.inventory.reviveTicket--;
       if (run) run.reviveCount = (run.reviveCount || 0) + 1;
       this.player.currentHp = Math.round(this.player.maxHp * 0.5);
-      game.playerManager.save();
+      await game.playerManager.save();
       await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
     }
 
@@ -307,7 +307,7 @@ export class BattleManager {
       this.player.inventory.reviveTicket--;
       if (game.currentRun) game.currentRun.reviveCount = (game.currentRun.reviveCount || 0) + 1;
       this.player.currentHp = Math.round(this.player.maxHp * 0.5);
-      game.playerManager.save();
+      await game.playerManager.save();
       await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
     }
 
@@ -381,7 +381,7 @@ export class BattleManager {
         this.player.inventory.reviveTicket--;
         if (game.currentRun) game.currentRun.reviveCount = (game.currentRun.reviveCount || 0) + 1;
         this.player.currentHp = Math.round(this.player.maxHp * 0.5);
-        game.playerManager.save();
+        await game.playerManager.save();
         await this.game.showModal(t('reviveUsed', this.player.inventory.reviveTicket));
       } else {
         await game.endRun(false);
@@ -404,7 +404,7 @@ export class BattleManager {
     if (this.player.inventory?.hintTicket > 0) {
       this.player.inventory.hintTicket--;
       if (game.currentRun) game.currentRun.hintCount = (game.currentRun.hintCount || 0) + 1;
-      game.playerManager.save();
+      await game.playerManager.save();
       await this._showHintInfo(monster);
       return;
     }
@@ -419,7 +419,7 @@ export class BattleManager {
 
     this.player.gold -= 50;
     if (game.currentRun) game.currentRun.hintCount = (game.currentRun.hintCount || 0) + 1;
-    game.playerManager.save();
+    await game.playerManager.save();
     await this._showHintInfo(monster);
   }
 
@@ -460,7 +460,7 @@ export class BattleManager {
       this.player.inventory.timeBoost--;
       if (this.game.currentRun) this.game.currentRun.timeBoostCount = (this.game.currentRun.timeBoostCount || 0) + 1;
       this.game.timer += 60;
-      this.game.playerManager.save();
+      await this.game.playerManager.save();
       SoundService.playClick();
       await this.game.showModal(t('timeBoostUsed', this.player.inventory.timeBoost));
     } else {
@@ -474,10 +474,8 @@ export class BattleManager {
 
     const question = monster.question || t('noQuestion');
     const topic = monster.topic || '';
+    const choices = monster.choices || [];
 
-    let message = `${t('questionLabel')}\n\n${question}`;
-    if (topic) message += `\n\n${t('topicHint', topic)}`;
-
-    await this.game.showModal(message);
+    await this.game.dialogManager.showQuestionModal(question, topic, choices);
   }
 }

@@ -376,6 +376,7 @@ export class Game {
 
   // 런 종료
   async endRun(isWin) {
+    if (!this.currentRun) return;
     this.currentRun.result = isWin ? 'clear' : 'failed';
     this.currentRun.endTime = Date.now();
 

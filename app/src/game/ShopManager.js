@@ -235,13 +235,13 @@ export class ShopManager {
     });
   }
 
-  equipCosmetic(category, itemId) {
+  async equipCosmetic(category, itemId) {
     const cosmetics = this.player.cosmetics;
     if (category === 'theme') {
       if (!cosmetics.purchasedThemes.includes(itemId)) return;
       Renderer.setBgTheme(itemId);
       SoundService.playClick();
-      this.game.playerManager.save();
+      await this.game.playerManager.save();
       this.game.render();
     } else {
       const purchasedKey = category === 'particle' ? 'purchasedParticles'
@@ -253,7 +253,7 @@ export class ShopManager {
       if (!cosmetics[purchasedKey].includes(itemId)) return;
       cosmetics[activeKey] = itemId;
       SoundService.playClick();
-      this.game.playerManager.save();
+      await this.game.playerManager.save();
       this.game.render();
     }
   }
