@@ -322,7 +322,19 @@ export class ApiService {
     if (extra.achievements) player.achievements = extra.achievements;
     if (extra.dailyMissions) player.dailyMissions = extra.dailyMissions;
     if (extra.weeklyMissions) player.weeklyMissions = extra.weeklyMissions;
-    if (extra.cosmetics) player.cosmetics = extra.cosmetics;
+    // 꾸미기: 구매 배열은 병합(union), 활성 선택은 서버 우선
+    const localCos = player.cosmetics || {};
+    const serverCos = extra.cosmetics || {};
+    const mergeArr = (a, b) => [...new Set([...(a || ['default']), ...(b || ['default'])])];
+    player.cosmetics = {
+      purchasedThemes: mergeArr(localCos.purchasedThemes, serverCos.purchasedThemes),
+      particleStyle: serverCos.particleStyle || localCos.particleStyle || 'default',
+      purchasedParticles: mergeArr(localCos.purchasedParticles, serverCos.purchasedParticles),
+      damageTextStyle: serverCos.damageTextStyle || localCos.damageTextStyle || 'default',
+      purchasedDamageText: mergeArr(localCos.purchasedDamageText, serverCos.purchasedDamageText),
+      correctFlash: serverCos.correctFlash || localCos.correctFlash || 'default',
+      purchasedFlash: mergeArr(localCos.purchasedFlash, serverCos.purchasedFlash)
+    };
     if (extra.totalGoldEarned !== undefined) player.totalGoldEarned = extra.totalGoldEarned;
     if (extra.totalCorrectAnswers !== undefined) player.totalCorrectAnswers = extra.totalCorrectAnswers;
     if (extra.subjectCounts) player.subjectCounts = extra.subjectCounts;

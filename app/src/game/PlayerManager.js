@@ -22,6 +22,7 @@ export class PlayerManager {
     this.player = playerData;
 
     // cosmetics 필드 마이그레이션
+    let cosmeticsMigrated = false;
     if (!this.player.cosmetics) {
       this.player.cosmetics = {
         purchasedThemes: ['default'],
@@ -32,11 +33,17 @@ export class PlayerManager {
         correctFlash: 'default',
         purchasedFlash: ['default']
       };
+      cosmeticsMigrated = true;
     }
 
     this.player.maxHp = this.getTotalMaxHp();
     this.player.currentHp = this.player.maxHp;
     await this.db.put('player', this.player);
+
+    // 마이그레이션 후 서버에도 즉시 동기화
+    if (cosmeticsMigrated && apiService.isLoggedIn()) {
+      apiService.putPlayer(this.player).catch(() => {});
+    }
   }
 
   createNewPlayer() {

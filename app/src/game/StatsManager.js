@@ -12,6 +12,39 @@ export class StatsManager {
     this._cacheKey = null;
   }
 
+  // 문제 텍스트에서 유형(topic) 추론
+  static inferTopic(monster) {
+    if (monster.topic) return monster.topic;
+    const q = (monster.question || '').toLowerCase();
+    const subj = monster.subject || 'math';
+
+    if (subj === 'math') {
+      if (q.includes('부등식') || /[<>≤≥]\s*\d/.test(q)) return '부등식';
+      if (q.includes('인수분해') || q.includes('factor')) return '인수분해';
+      if (q.includes('이차') || q.includes('x²') || q.includes('x^2')) return '이차방정식';
+      if (q.includes('함수') || q.includes('f(x)') || q.includes('f(')) return '함수';
+      if (q.includes('수열') || q.includes('등차') || q.includes('등비')) return '수열';
+      if (q.includes('확률') || q.includes('경우의 수')) return '확률';
+      if (q.includes('넓이') || q.includes('삼각형') || q.includes('사각형') || q.includes('원의') || q.includes('도형') || q.includes('둘레') || q.includes('부피')) return '도형';
+      if (q.includes('퍼센트') || q.includes('%') || q.includes('비율') || q.includes('비례')) return '비율/퍼센트';
+      if (q.includes('분수') || /\d+\/\d+\s*[+\-×÷]/.test(q)) return '분수 계산';
+      if (q.includes('방정식') || /\d+\s*x\s*[+\-=]/.test(q) || /x\s*[+\-]\s*\d+\s*=/.test(q)) return '일차방정식';
+      return '일차방정식'; // 수학 기본값
+    }
+    if (subj === 'science') {
+      if (q.includes('유전') || q.includes('dna') || q.includes('멘델') || q.includes('형질')) return '유전';
+      if (q.includes('세포') || q.includes('분열') || q.includes('삼투')) return '세포';
+      if (q.includes('전기') || q.includes('자기') || q.includes('전자기') || q.includes('전류') || q.includes('전압')) return '전자기';
+      if (q.includes('몰') || q.includes('농도') || q.includes('화학양론')) return '몰과 반응식';
+      if (q.includes('화학') || q.includes('반응식') || q.includes('질량보존')) return '화학반응';
+      if (q.includes('힘') || q.includes('운동') || q.includes('가속') || q.includes('속도') || q.includes('f=ma')) return '힘과 운동';
+      if (q.includes('역학') || q.includes('에너지') || q.includes('운동량') || q.includes('일과')) return '역학';
+      if (q.includes('지구') || q.includes('지층') || q.includes('판') || q.includes('기상') || q.includes('화석')) return '지구과학';
+      return '힘과 운동'; // 과학 기본값
+    }
+    return null;
+  }
+
   async aggregateStats() {
     const db = this.game.db;
     const runs = await db.getAll('runs') || [];
@@ -194,18 +227,7 @@ export class StatsManager {
       stats.recentAccuracy = recentTotal > 0 ? Math.round((recentCorrect / recentTotal) * 100) : 0;
     }
 
-    // 정적 topic→subject 매핑 (폴백)
-    const KNOWN_TOPIC_SUBJECTS = {
-      '일차방정식': 'math', '이차방정식': 'math', '인수분해': 'math',
-      '함수': 'math', '부등식': 'math', '분수 계산': 'math',
-      '비율/퍼센트': 'math', '수열': 'math', '확률': 'math', '도형': 'math',
-      '힘과 운동': 'science', '화학반응': 'science', '세포': 'science',
-      '지구과학': 'science', '역학': 'science', '전자기': 'science',
-      '몰과 반응식': 'science', '유전': 'science'
-    };
-
-    // 몬스터 과목별/난이도별 집계
-    const topicToSubject = {};
+    // 몬스터 과목별/난이도별 집계 + 유형 추론
     const monstersById = {};
     for (const m of monsters) {
       if (m.id) monstersById[m.id] = m;
@@ -228,42 +250,45 @@ export class StatsManager {
         stats.difficultyAccuracy[diff].attempts += (m.stats?.attempts || 0);
         stats.difficultyAccuracy[diff].correct += (m.stats?.correct || 0);
       }
-
-      // topic→subject 매핑 구축
-      if (m.topic) {
-        topicToSubject[m.topic] = subj;
-      }
     }
 
-    // 1차: defeatedMonsters에서 유형별 통계 구축 (모든 런 커버)
+    // defeatedMonsters에서 유형별 통계 구축 (topic 없으면 추론)
     for (const run of sortedRuns) {
       if (!run.defeatedMonsters) continue;
       for (const mId of run.defeatedMonsters) {
         const m = monstersById[mId];
-        if (!m || !m.topic) continue;
+        if (!m) continue;
+        const topic = StatsManager.inferTopic(m);
+        if (!topic) continue;
         const subj = m.subject || 'math';
         if (!stats.subjectTopics[subj]) stats.subjectTopics[subj] = {};
-        if (!stats.subjectTopics[subj][m.topic]) {
-          stats.subjectTopics[subj][m.topic] = { attempts: 0, correct: 0 };
+        if (!stats.subjectTopics[subj][topic]) {
+          stats.subjectTopics[subj][topic] = { attempts: 0, correct: 0 };
         }
-        stats.subjectTopics[subj][m.topic].attempts++;
-        stats.subjectTopics[subj][m.topic].correct++;
+        stats.subjectTopics[subj][topic].attempts++;
+        stats.subjectTopics[subj][topic].correct++;
       }
     }
 
-    // 2차: 런 기반 correctByTopic/wrongByTopic 병합 (더 정확한 데이터로 보정)
+    // 런 기반 correctByTopic/wrongByTopic 병합 (더 정확한 데이터로 보정)
+    const KNOWN_TOPIC_SUBJECTS = {
+      '일차방정식': 'math', '이차방정식': 'math', '인수분해': 'math',
+      '함수': 'math', '부등식': 'math', '분수 계산': 'math',
+      '비율/퍼센트': 'math', '수열': 'math', '확률': 'math', '도형': 'math',
+      '힘과 운동': 'science', '화학반응': 'science', '세포': 'science',
+      '지구과학': 'science', '역학': 'science', '전자기': 'science',
+      '몰과 반응식': 'science', '유전': 'science'
+    };
     const allTopics = new Set([
       ...Object.keys(stats.correctByTopic),
       ...Object.keys(stats.wrongByTopic)
     ]);
     for (const topic of allTopics) {
-      const subj = topicToSubject[topic] || KNOWN_TOPIC_SUBJECTS[topic];
+      const subj = KNOWN_TOPIC_SUBJECTS[topic];
       if (!subj) continue;
-
       const runCorrect = stats.correctByTopic[topic] || 0;
       const runWrong = stats.wrongByTopic[topic] || 0;
       const runAttempts = runCorrect + runWrong;
-
       if (!stats.subjectTopics[subj]) stats.subjectTopics[subj] = {};
       if (!stats.subjectTopics[subj][topic]) {
         stats.subjectTopics[subj][topic] = { attempts: 0, correct: 0 };

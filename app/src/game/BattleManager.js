@@ -3,6 +3,7 @@ import { GAME_CONFIG, LEVEL_CONFIG, UPGRADES, DROP_RATES, RARITY } from '../util
 import { SoundService } from '../services/SoundService.js';
 import { geminiService } from '../services/GeminiService.js';
 import { problemGeneratorService } from '../services/ProblemGeneratorService.js';
+import { StatsManager } from './StatsManager.js';
 import { t } from '../i18n/i18n.js';
 
 export class BattleManager {
@@ -61,8 +62,8 @@ export class BattleManager {
     if (!run.correctBySubject) run.correctBySubject = {};
     run.correctBySubject[correctSubject] = (run.correctBySubject[correctSubject] || 0) + 1;
 
-    // 유형(topic)별 정답 카운트
-    const correctTopic = monster?.topic || '';
+    // 유형(topic)별 정답 카운트 (없으면 추론)
+    const correctTopic = monster?.topic || StatsManager.inferTopic(monster) || '';
     if (correctTopic) {
       if (!run.correctByTopic) run.correctByTopic = {};
       run.correctByTopic[correctTopic] = (run.correctByTopic[correctTopic] || 0) + 1;
@@ -214,8 +215,8 @@ export class BattleManager {
     if (!run.wrongBySubject) run.wrongBySubject = {};
     run.wrongBySubject[wrongSubject] = (run.wrongBySubject[wrongSubject] || 0) + 1;
 
-    // 유형(topic)별 오답 카운트
-    const wrongTopic = monster?.topic || '';
+    // 유형(topic)별 오답 카운트 (없으면 추론)
+    const wrongTopic = monster?.topic || StatsManager.inferTopic(monster) || '';
     if (wrongTopic) {
       if (!run.wrongByTopic) run.wrongByTopic = {};
       run.wrongByTopic[wrongTopic] = (run.wrongByTopic[wrongTopic] || 0) + 1;
