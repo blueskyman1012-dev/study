@@ -53,6 +53,40 @@ export class DialogManager {
     });
   }
 
+  showQuestionModal(question, topic, choices) {
+    return new Promise((resolve) => {
+      const existing = document.getElementById('custom-modal');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'custom-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;justify-content:center;align-items:center;font-family:system-ui,-apple-system,sans-serif;';
+
+      const topicHtml = topic ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">📌 ${escapeHtml(topic)}</div>` : '';
+      let choicesHtml = '';
+      if (choices.length > 0) {
+        const choiceItems = choices.map((c, i) =>
+          `<div style="padding:10px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;font-size:16px;line-height:1.5;color:#e2e8f0;"><span style="color:#818cf8;font-weight:bold;margin-right:8px;">${i + 1}.</span>${escapeHtml(String(c))}</div>`
+        ).join('');
+        choicesHtml = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);">${choiceItems}</div>`;
+      }
+
+      modal.innerHTML = `
+        <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:24px;width:340px;max-height:85vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
+          <div style="font-size:12px;font-weight:bold;color:#818cf8;margin-bottom:12px;text-align:center;">🔍 ${escapeHtml(t('questionLabel'))}</div>
+          ${topicHtml}
+          <div style="font-size:20px;font-weight:bold;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;">${escapeHtml(question)}</div>
+          ${choicesHtml}
+          <button id="modal-ok-btn" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;margin-top:16px;">${t('close')}</button>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      document.getElementById('modal-ok-btn').onclick = () => { modal.remove(); resolve(); };
+      modal.onclick = (e) => { if (e.target === modal) { modal.remove(); resolve(); } };
+    });
+  }
+
   showConfirm(message) {
     return new Promise((resolve) => {
       const existing = document.getElementById('custom-modal');

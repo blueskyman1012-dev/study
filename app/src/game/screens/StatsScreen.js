@@ -158,79 +158,62 @@ function renderOverviewTab(game, stats, ctx, startY) {
   }
   ctx.restore();
 
-  // 하단 총 플레이 횟수
-  Renderer.drawText(`${t('totalRuns')}: ${stats.totalRuns}`, 200, y + 118, {
-    font: '11px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
-  });
   y += 140;
 
-  // ─── B. 승/패 + 연승 + 시간 (3열 카드) ───
-  const triW = 114;
-  const triH = 82;
-  const triGap = 9;
+  // ─── B. 승/패+연승 & 시간+플레이 (2열 카드) ───
+  const dualW = 175;
+  const dualH = 90;
+  const dualGap = 10;
 
-  // 승/패 카드
-  Renderer.drawGradientCard(20, y, triW, triH, 10, '#1a1a28', '#151520');
-  Renderer.roundRect(20, y, triW, triH, 10, null, 'rgba(34,197,94,0.2)');
-  Renderer.drawText('⚔️', 77, y + 10, { font: '11px system-ui', align: 'center' });
-  Renderer.drawText(`${stats.totalClears}`, 52, y + 36, {
-    font: 'bold 20px system-ui', color: COLORS.SUCCESS, align: 'center'
+  // 좌측 카드: 승/패 + 연승
+  Renderer.drawGradientCard(20, y, dualW, dualH, 10, '#1a1a28', '#151520');
+  Renderer.roundRect(20, y, dualW, dualH, 10, null, 'rgba(34,197,94,0.2)');
+  Renderer.drawText('⚔️ ' + t('stats_wins') + '/' + t('stats_losses'), 108, y + 10, {
+    font: 'bold 11px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center'
   });
-  Renderer.drawText(t('stats_wins'), 52, y + 60, {
-    font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+  Renderer.drawText(`${stats.totalClears}`, 62, y + 38, {
+    font: 'bold 22px system-ui', color: COLORS.SUCCESS, align: 'center'
   });
-  Renderer.drawText(`${stats.totalFails}`, 110, y + 36, {
-    font: 'bold 20px system-ui', color: COLORS.DANGER, align: 'center'
+  Renderer.drawText(t('stats_wins'), 62, y + 58, {
+    font: '10px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
   });
-  Renderer.drawText(t('stats_losses'), 110, y + 60, {
-    font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+  Renderer.drawText(`${stats.totalFails}`, 140, y + 38, {
+    font: 'bold 22px system-ui', color: COLORS.DANGER, align: 'center'
   });
-
-  // 연승 카드
-  const streakX = 20 + triW + triGap;
-  Renderer.drawGradientCard(streakX, y, triW, triH, 10, '#1a1a28', '#151520');
-  Renderer.roundRect(streakX, y, triW, triH, 10, null, 'rgba(251,191,36,0.2)');
-  Renderer.drawText('🔥 ' + t('stats_streak'), streakX + triW / 2, y + 10, {
-    font: 'bold 10px system-ui', color: COLORS.WARNING, align: 'center'
+  Renderer.drawText(t('stats_losses'), 140, y + 58, {
+    font: '10px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
   });
-  Renderer.drawText(`${stats.currentStreak}`, streakX + 35, y + 36, {
-    font: 'bold 20px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center'
-  });
-  Renderer.drawText(t('stats_currentStreak'), streakX + 35, y + 60, {
-    font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
-  });
-  Renderer.drawText(`${stats.bestStreak}`, streakX + triW - 35, y + 36, {
-    font: 'bold 20px system-ui', color: COLORS.WARNING, align: 'center'
-  });
-  Renderer.drawText(t('stats_bestStreak'), streakX + triW - 35, y + 60, {
-    font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+  // 연승 (하단)
+  Renderer.drawText(`🔥 ${stats.currentStreak}/${stats.bestStreak}`, 108, y + 76, {
+    font: '10px system-ui', color: COLORS.WARNING, align: 'center'
   });
 
-  // 시간 카드
-  const timeX = 20 + (triW + triGap) * 2;
-  Renderer.drawGradientCard(timeX, y, triW, triH, 10, '#1a1a28', '#151520');
-  Renderer.roundRect(timeX, y, triW, triH, 10, null, 'rgba(56,189,248,0.2)');
-  Renderer.drawText('⏱️ ' + t('stats_time'), timeX + triW / 2, y + 10, {
-    font: 'bold 10px system-ui', color: '#38bdf8', align: 'center'
+  // 우측 카드: 시간 + 플레이
+  const rightX = 20 + dualW + dualGap;
+  Renderer.drawGradientCard(rightX, y, dualW, dualH, 10, '#1a1a28', '#151520');
+  Renderer.roundRect(rightX, y, dualW, dualH, 10, null, 'rgba(56,189,248,0.2)');
+  Renderer.drawText('⏱️ ' + t('stats_time'), rightX + dualW / 2, y + 10, {
+    font: 'bold 11px system-ui', color: '#38bdf8', align: 'center'
   });
-  Renderer.drawText(formatDuration(stats.totalPlayTime), timeX + triW / 2, y + 40, {
-    font: 'bold 15px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center'
+  Renderer.drawText(formatDuration(stats.totalPlayTime), rightX + dualW / 2, y + 40, {
+    font: 'bold 18px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center'
   });
-  Renderer.drawText(t('stats_totalPlayTime'), timeX + triW / 2, y + 62, {
-    font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+  Renderer.drawText(t('stats_totalPlayTime'), rightX + dualW / 2, y + 60, {
+    font: '10px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
   });
-  y += triH + 10;
+  Renderer.drawText(`${t('totalRuns')}: ${stats.totalRuns}`, rightX + dualW / 2, y + 76, {
+    font: '10px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+  });
+  y += dualH + 10;
 
   // ─── C. 골드 + 아이템 통합 카드 ───
-  Renderer.drawGradientCard(20, y, 360, 110, 14, '#1a1a28', '#151520');
-  Renderer.roundRect(20, y, 360, 110, 14, null, 'rgba(251,191,36,0.15)');
+  Renderer.drawGradientCard(20, y, 360, 80, 14, '#1a1a28', '#151520');
+  Renderer.roundRect(20, y, 360, 80, 14, null, 'rgba(251,191,36,0.15)');
 
-  // 골드 (상단 줄)
-  Renderer.drawText('💰 ' + t('stats_gold'), 40, y + 14, {
-    font: 'bold 12px system-ui', color: '#fbbf24'
-  });
-  Renderer.drawText(`${(stats.totalGoldEarned || 0).toLocaleString()}G`, 365, y + 14, {
-    font: 'bold 16px system-ui', color: '#fbbf24', align: 'right'
+  // 골드 (상단 크게)
+  Renderer.drawText('💰', 45, y + 18, { font: '18px system-ui', align: 'center' });
+  Renderer.drawText(`${(stats.totalGoldEarned || 0).toLocaleString()}G`, 200, y + 16, {
+    font: 'bold 22px system-ui', color: '#fbbf24', align: 'center'
   });
 
   // 구분선
@@ -238,30 +221,31 @@ function renderOverviewTab(game, stats, ctx, startY) {
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(35, y + 34);
-  ctx.lineTo(365, y + 34);
+  ctx.moveTo(35, y + 42);
+  ctx.lineTo(365, y + 42);
   ctx.stroke();
   ctx.restore();
 
-  // 아이템 사용 (하단 2행)
+  // 아이템 (1행 아이콘+숫자)
   const itemData = [
-    { icon: '⏭️', label: t('stats_skipTotal'), value: stats.totalSkips || 0, color: COLORS.TEXT_PRIMARY },
-    { icon: '💡', label: t('stats_hintTotal'), value: stats.totalHints || 0, color: '#fbbf24' },
-    { icon: '⏰', label: t('stats_timeBoostTotal'), value: stats.totalTimeBoosts || 0, color: '#38bdf8' },
-    { icon: '🪶', label: t('stats_reviveTotal'), value: stats.totalRevives || 0, color: COLORS.SUCCESS },
-    { icon: '⏱️', label: t('stats_timeoutTotal'), value: stats.totalTimeouts || 0, color: COLORS.DANGER }
+    { icon: '⏭️', value: stats.totalSkips || 0, color: COLORS.TEXT_PRIMARY },
+    { icon: '💡', value: stats.totalHints || 0, color: '#fbbf24' },
+    { icon: '⏰', value: stats.totalTimeBoosts || 0, color: '#38bdf8' },
+    { icon: '🪶', value: stats.totalRevives || 0, color: COLORS.SUCCESS },
+    { icon: '⏱️', value: stats.totalTimeouts || 0, color: COLORS.DANGER }
   ];
 
+  const itemStartX = 40;
+  const itemSpacing = 68;
   for (let i = 0; i < itemData.length; i++) {
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    const ix = 40 + col * 115;
-    const iy = y + 48 + row * 30;
+    const ix = itemStartX + i * itemSpacing;
     const d = itemData[i];
-    Renderer.drawText(`${d.icon} ${d.label}`, ix, iy, { font: '10px system-ui', color: COLORS.TEXT_SECONDARY });
-    Renderer.drawText(`${d.value}`, ix + 95, iy, { font: 'bold 13px system-ui', color: d.color, align: 'right' });
+    Renderer.drawText(`${d.icon}`, ix, y + 56, { font: '13px system-ui', align: 'center' });
+    Renderer.drawText(`${d.value}`, ix + 22, y + 56, {
+      font: 'bold 12px system-ui', color: d.color
+    });
   }
-  y += 120;
+  y += 90;
 
   const totalContentHeight = y + 40;
   game.scrollMaxY = Math.max(0, totalContentHeight - 700);
@@ -271,9 +255,12 @@ function renderOverviewTab(game, stats, ctx, startY) {
 function renderSubjectTab(game, stats, ctx, startY) {
   let y = startY;
 
-  // ─── A. 과목별 정답률 링+바 차트 ───
-  Renderer.drawGradientCard(20, y, 360, 220, 14, '#1a1a28', '#151520');
-  Renderer.roundRect(20, y, 360, 220, 14, null, 'rgba(99,102,241,0.2)');
+  // ─── A. 과목별 정답률 링+바 차트 (정답/오답 수 통합) ───
+  const wrongSubjects = stats.wrongBySubject || {};
+  const correctSubjects = stats.correctBySubject || {};
+
+  Renderer.drawGradientCard(20, y, 360, 230, 14, '#1a1a28', '#151520');
+  Renderer.roundRect(20, y, 360, 230, 14, null, 'rgba(99,102,241,0.2)');
   Renderer.drawText('📚 ' + t('stats_subjectPerf'), 40, y + 18, {
     font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
   });
@@ -290,6 +277,8 @@ function renderSubjectTab(game, stats, ctx, startY) {
     const count = stats.bySubject?.[subj.key] || 0;
     const sa = stats.subjectAccuracy?.[subj.key];
     const subjAcc = (sa && sa.attempts > 0) ? Math.round((sa.correct / sa.attempts) * 100) : 0;
+    const cCount = correctSubjects[subj.key] || 0;
+    const wCount = wrongSubjects[subj.key] || 0;
 
     ctx.save();
     drawSmallRing(ctx, 52, sy + 12, 16, 4, subjAcc / 100, subj.color);
@@ -301,8 +290,9 @@ function renderSubjectTab(game, stats, ctx, startY) {
     Renderer.drawText(`${subj.icon} ${t(subj.nameKey)}`, 80, sy, {
       font: '12px system-ui', color: COLORS.TEXT_PRIMARY
     });
-    Renderer.drawText(`${count}`, 355, sy, {
-      font: 'bold 12px system-ui', color: COLORS.TEXT_SECONDARY, align: 'right'
+    // 정답/오답 수 표시
+    Renderer.drawText(`✅${cCount} ❌${wCount}`, 355, sy, {
+      font: '10px system-ui', color: COLORS.TEXT_SECONDARY, align: 'right'
     });
 
     const maxSubjCount = Math.max(1, ...subjectEntries.map(s => stats.bySubject?.[s.key] || 0));
@@ -320,64 +310,10 @@ function renderSubjectTab(game, stats, ctx, startY) {
 
     sy += 45;
   }
-  y += 230;
+  y += 240;
 
-  // ─── B. 과목별 오답 분석 (정답/오답 바) ───
-  const wrongSubjects = stats.wrongBySubject || {};
-  const correctSubjects = stats.correctBySubject || {};
-  const allAnalysisSubjects = new Set([...Object.keys(wrongSubjects), ...Object.keys(correctSubjects)]);
-
-  if (allAnalysisSubjects.size > 0) {
-    const subjH = 45 + allAnalysisSubjects.size * 34;
-    Renderer.drawGradientCard(20, y, 360, subjH, 14, '#1a1a28', '#151520');
-    Renderer.roundRect(20, y, 360, subjH, 14, null, 'rgba(239,68,68,0.2)');
-    Renderer.drawText('📊 ' + t('stats_wrongBySubject'), 40, y + 18, {
-      font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
-    });
-
-    const subjectInfo = {
-      math: SUBJECTS.MATH, english: SUBJECTS.ENGLISH,
-      korean: SUBJECTS.KOREAN, science: SUBJECTS.SCIENCE
-    };
-
-    let wy = y + 42;
-    for (const subj of allAnalysisSubjects) {
-      const info = subjectInfo[subj];
-      const icon = info?.icon || '📝';
-      const name = t(info?.nameKey || subj);
-      const cCount = correctSubjects[subj] || 0;
-      const wCount = wrongSubjects[subj] || 0;
-      const totalSubj = cCount + wCount;
-      const wrongRate = totalSubj > 0 ? Math.round((wCount / totalSubj) * 100) : 0;
-
-      Renderer.drawText(`${icon} ${name}`, 40, wy, { font: '12px system-ui', color: COLORS.TEXT_PRIMARY });
-
-      const barX = 130;
-      const barMaxW = 130;
-      const barTotal = Math.max(1, totalSubj);
-      const correctBarW = Math.max(0, barMaxW * cCount / barTotal);
-      const wrongBarW = Math.max(0, barMaxW * wCount / barTotal);
-
-      Renderer.roundRect(barX, wy - 4, barMaxW, 10, 5, 'rgba(255,255,255,0.06)');
-      if (correctBarW > 0) Renderer.roundRect(barX, wy - 4, correctBarW, 10, 5, COLORS.SUCCESS);
-      if (wrongBarW > 0) Renderer.roundRect(barX + correctBarW, wy - 4, wrongBarW, 10, 5, COLORS.DANGER);
-
-      Renderer.drawText(`✅${cCount} ❌${wCount}`, 280, wy - 2, { font: '9px system-ui', color: COLORS.TEXT_SECONDARY });
-      Renderer.drawText(`${wrongRate}%`, 355, wy - 2, {
-        font: 'bold 10px system-ui', color: wrongRate >= 50 ? COLORS.DANGER : COLORS.WARNING, align: 'right'
-      });
-
-      wy += 34;
-    }
-    y += subjH + 10;
-  }
-
-  // ─── C. 과목별 문제유형 상세 ───
+  // ─── B. 과목별 문제유형 상세 ───
   const subjectTopics = stats.subjectTopics || {};
-  const subjectInfoC = {
-    math: SUBJECTS.MATH, english: SUBJECTS.ENGLISH,
-    korean: SUBJECTS.KOREAN, science: SUBJECTS.SCIENCE
-  };
 
   for (const subj of subjectEntries) {
     const topicMap = subjectTopics[subj.key];
@@ -543,11 +479,30 @@ function renderAnalysisTab(game, stats, ctx, startY) {
   // ─── B. 최근 런 목록 ───
   const displayRuns = recentRuns.slice(-5).reverse();
   if (displayRuns.length > 0) {
-    const runListH = 30 + displayRuns.length * 24;
+    const runHeaderH = 18;
+    const runListH = 30 + runHeaderH + displayRuns.length * 24;
     Renderer.drawGradientCard(20, y, 360, runListH, 14, '#1a1a28', '#151520');
     Renderer.roundRect(20, y, 360, runListH, 14, null, 'rgba(99,102,241,0.15)');
 
-    let ry = y + 14;
+    // 컬럼 헤더
+    const hdrY = y + 14;
+    Renderer.drawText(t('stats_colDate') || '날짜', 60, hdrY, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    Renderer.drawText(t('stats_colCorrectRate') || '정답률', 180, hdrY, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    Renderer.drawText(t('stats_colCombo') || '콤보', 240, hdrY, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    Renderer.drawText(t('stats_colGold') || '골드', 300, hdrY, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    Renderer.drawText(t('stats_colTime') || '시간', 360, hdrY, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'right'
+    });
+
+    let ry = y + 14 + runHeaderH;
     for (const run of displayRuns) {
       const isWin = run.result === 'clear';
       const icon = isWin ? '✅' : '💀';
@@ -624,8 +579,8 @@ function renderAnalysisTab(game, stats, ctx, startY) {
   y += 165;
 
   // ─── D. 심화 통계 ───
-  Renderer.drawGradientCard(20, y, 360, 120, 14, '#1a1a28', '#151520');
-  Renderer.roundRect(20, y, 360, 120, 14, null, 'rgba(99,102,241,0.2)');
+  Renderer.drawGradientCard(20, y, 360, 132, 14, '#1a1a28', '#151520');
+  Renderer.roundRect(20, y, 360, 132, 14, null, 'rgba(99,102,241,0.2)');
   Renderer.drawText('🔬 ' + t('stats_advanced'), 40, y + 18, {
     font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT
   });
@@ -643,7 +598,7 @@ function renderAnalysisTab(game, stats, ctx, startY) {
     const col = i % 2;
     const row = Math.floor(i / 2);
     const ax = 40 + col * 180;
-    const apy = ay + row * 24;
+    const apy = ay + row * 28;
 
     Renderer.drawText(advStats[i].label, ax, apy, {
       font: '11px system-ui', color: COLORS.TEXT_SECONDARY
@@ -652,7 +607,7 @@ function renderAnalysisTab(game, stats, ctx, startY) {
       font: 'bold 12px system-ui', color: advStats[i].color, align: 'right'
     });
   }
-  y += 130;
+  y += 142;
 
   const totalContentHeight = y + 40;
   game.scrollMaxY = Math.max(0, totalContentHeight - 700);

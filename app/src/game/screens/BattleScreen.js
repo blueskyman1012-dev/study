@@ -125,10 +125,9 @@ export function renderBattleScreen(game) {
     Renderer.drawText(line, 200, startY + i * lineHeight, { font: `bold ${fontSize}px system-ui`, align: 'center' });
   });
 
-  if (questionText.length > maxCharsPerLine * 2) {
-    Renderer.drawText(t('viewFull'), 355, qCardY + 10, { font: '11px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
-    game.registerClickArea('viewQuestion', 320, qCardY, 70, 25, () => game.battleManager.showFullQuestion());
-  }
+  // 항상 크게 보기 아이콘 표시 + 문제 카드 전체 클릭 가능
+  Renderer.drawText('🔍', 365, qCardY + 8, { font: '12px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
+  game.registerClickArea('viewQuestion', 20, qCardY, 360, qCardH, () => game.battleManager.showFullQuestion());
 
   // 선택지
   const choices = monster.choices || ['①', '②', '③', '④'];
