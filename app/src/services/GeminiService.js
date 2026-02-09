@@ -76,9 +76,9 @@ JSON 형식:
 
 이미지를 분석하고 위 JSON 형식으로만 응답하세요.`;
 
-    const response = await fetch(`${GEMINI_VISION_URL}?key=${this.apiKey}`, {
+    const response = await fetch(GEMINI_VISION_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
       body: JSON.stringify({
         contents: [{
           parts: [
@@ -128,10 +128,11 @@ JSON 형식:
       throw new Error('API 키가 설정되지 않았습니다');
     }
 
-    const response = await fetch(`${GEMINI_TEXT_URL}?key=${this.apiKey}`, {
+    const response = await fetch(GEMINI_TEXT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': this.apiKey,
       },
       body: JSON.stringify({
         contents: [{

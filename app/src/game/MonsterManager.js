@@ -50,7 +50,9 @@ export class MonsterManager {
   // 적응형 난이도로 몬스터 선택 (인덱스 직접 참조)
   selectMonsterByDifficulty(accuracyRate, totalAnswers) {
     if (totalAnswers < 5) {
-      return this.monsters[Math.floor(Math.random() * this.monsters.length)];
+      const beginnerPool = this.monsters.filter(m => (m.difficulty || 2) <= 2);
+      const pool = beginnerPool.length > 0 ? beginnerPool : this.monsters;
+      return pool[Math.floor(Math.random() * pool.length)];
     }
 
     const { easy, medium, hard } = this._difficultyIndex;

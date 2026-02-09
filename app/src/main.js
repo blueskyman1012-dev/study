@@ -546,7 +546,9 @@ class App {
     if (!apiService.isLoggedIn()) return;
     if (this.game && this.game.currentScreen === SCREENS.BATTLE) return;
     if (Date.now() - this.lastSyncTime < 30000) return;
+    if (this._syncing) return;
 
+    this._syncing = true;
     try {
       console.log('🔄 탭 복귀 - 서버 동기화 중...');
       await apiService.downloadPlayerData(this.db);
@@ -559,6 +561,8 @@ class App {
       console.log('✅ 탭 복귀 동기화 완료');
     } catch (err) {
       console.warn('탭 복귀 동기화 실패:', err.message);
+    } finally {
+      this._syncing = false;
     }
   }
 

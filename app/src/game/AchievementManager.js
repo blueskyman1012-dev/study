@@ -195,8 +195,8 @@ export class AchievementManager {
     }
 
     const total = this.player.totalCorrectAnswers || 0;
-    if (total >= 200) this.unlock('answer_100');
-    if (total >= 800) this.unlock('answer_500');
+    if (total >= 100) this.unlock('answer_100');
+    if (total >= 500) this.unlock('answer_500');
   }
 
   onGoldEarned(amount) {
@@ -204,9 +204,9 @@ export class AchievementManager {
     this._updateDaily('goldEarned', amount);
 
     const total = this.player.totalGoldEarned;
-    if (total >= 3000) this.unlock('gold_1000');
-    if (total >= 20000) this.unlock('gold_10000');
-    if (total >= 150000) this.unlock('gold_100000');
+    if (total >= 1000) this.unlock('gold_1000');
+    if (total >= 10000) this.unlock('gold_10000');
+    if (total >= 100000) this.unlock('gold_100000');
   }
 
   onMonsterDefeated(bossType) {
@@ -217,15 +217,15 @@ export class AchievementManager {
     if (bossType === 'FINAL_BOSS') this.unlock('boss_final');
 
     const kills = (this.player.stats?.totalKills || 0);
-    if (kills >= 80) this.unlock('kills_50');
-    if (kills >= 200) this.unlock('kills_100');
-    if (kills >= 800) this.unlock('kills_500');
+    if (kills >= 50) this.unlock('kills_50');
+    if (kills >= 100) this.unlock('kills_100');
+    if (kills >= 500) this.unlock('kills_500');
   }
 
   onLevelUp(level) {
-    if (level >= 15) this.unlock('level_10');
-    if (level >= 35) this.unlock('level_25');
-    if (level >= 60) this.unlock('level_50');
+    if (level >= 10) this.unlock('level_10');
+    if (level >= 25) this.unlock('level_25');
+    if (level >= 50) this.unlock('level_50');
     if (level >= 99) this.unlock('level_99');
     if (level >= 100) this.unlock('level_100');
     this.checkPowerAchievements();

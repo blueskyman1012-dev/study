@@ -181,28 +181,28 @@ export function renderBattleScreen(game) {
 
   const hintCount = player.inventory?.hintTicket || 0;
   const hasHint = hintCount > 0;
-  Renderer.drawButton(10, 618, 90, 46, `💡${hintCount}`, {
+  Renderer.drawButton(8, 620, 88, 46, `💡${hintCount}`, {
     bgColor: hasHint ? 'rgba(251,191,36,0.2)' : 'rgba(100,100,100,0.15)',
     borderColor: hasHint ? 'rgba(251,191,36,0.6)' : 'rgba(100,100,100,0.3)',
     textColor: hasHint ? COLORS.WARNING : COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('hint', 10, 618, 90, 46, () => game.battleManager.useHint());
+  game.registerClickArea('hint', 8, 620, 88, 46, () => game.battleManager.useHint());
 
   const hasTimeBoost = (player.inventory?.timeBoost || 0) > 0;
-  Renderer.drawButton(105, 618, 90, 46, `⏰${player.inventory?.timeBoost || 0}`, {
+  Renderer.drawButton(104, 620, 88, 46, `⏰${player.inventory?.timeBoost || 0}`, {
     bgColor: hasTimeBoost ? 'rgba(34,197,94,0.2)' : 'rgba(100,100,100,0.15)',
     borderColor: hasTimeBoost ? 'rgba(34,197,94,0.6)' : 'rgba(100,100,100,0.3)',
     textColor: hasTimeBoost ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('timeBoost', 105, 618, 90, 46, () => game.battleManager.useTimeBoost());
+  game.registerClickArea('timeBoost', 104, 620, 88, 46, () => game.battleManager.useTimeBoost());
 
-  Renderer.drawButton(200, 618, 90, 46, t('skip'), {
+  Renderer.drawButton(200, 620, 88, 46, t('skip'), {
     bgColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.5)', textColor: COLORS.DANGER, fontSize: 14
   });
-  game.registerClickArea('skip', 200, 618, 90, 46, () => game.battleManager.skipQuestion());
+  game.registerClickArea('skip', 200, 620, 88, 46, () => game.battleManager.skipQuestion());
 
-  Renderer.drawButton(295, 618, 95, 46, t('quit'), {
+  Renderer.drawButton(296, 620, 96, 46, t('quit'), {
     bgColor: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.5)', textColor: COLORS.ACCENT_LIGHT, fontSize: 14
   });
-  game.registerClickArea('quit', 295, 618, 95, 46, () => game.endRun(false));
+  game.registerClickArea('quit', 296, 620, 96, 46, () => game.endRun(false));
 }

@@ -22,19 +22,24 @@ export function renderResultScreen(game) {
   const wrongByDiff = run?.wrongByDifficulty || {};
   const hasDiffData = Object.keys(wrongByDiff).length > 0;
 
-  // 카드 높이 동적 계산
+  // 카드 높이 동적 계산 (구분선/패딩 포함)
   let cardH = 200; // 기본 통계 5줄
   cardH += 80;     // 아이템 사용 섹션
-  if (allSubjects.size > 0) cardH += 15 + allSubjects.size * 20;
-  if (allTopics.size > 0) cardH += 25 + Math.min(allTopics.size, 5) * 18;
-  if (hasDiffData) cardH += 25 + Object.keys(wrongByDiff).length * 18;
+  if (allSubjects.size > 0) cardH += 25 + allSubjects.size * 20;
+  if (allTopics.size > 0) cardH += 35 + Math.min(allTopics.size, 5) * 18;
+  if (hasDiffData) cardH += 35 + Object.keys(wrongByDiff).length * 18;
 
-  Renderer.drawText(title, 200, 55, { font: 'bold 28px system-ui', color: titleColor, align: 'center' });
+  // 전체 콘텐츠 높이 = 타이틀(55) + 카드여백(90) + 카드 + 버튼(65)
+  const totalContentH = 90 + cardH + 65;
+  game.scrollMaxY = Math.max(0, totalContentH - GAME_CONFIG.CANVAS_HEIGHT);
+  const scrollY = game.scrollY || 0;
+
+  Renderer.drawText(title, 200, 55 - scrollY, { font: 'bold 28px system-ui', color: titleColor, align: 'center' });
 
   // 메인 카드
-  Renderer.roundRect(25, 90, 350, cardH, 16, COLORS.BG_CARD);
+  Renderer.roundRect(25, 90 - scrollY, 350, cardH, 16, COLORS.BG_CARD);
 
-  let y = 115;
+  let y = 115 - scrollY;
 
   // 기존 통계
   Renderer.drawText(`${t('stageLabel')}: ${game.stage}/${GAME_CONFIG.STAGES_PER_DUNGEON}`, 200, y, {
@@ -171,7 +176,7 @@ export function renderResultScreen(game) {
   }
 
   // 메인 버튼
-  const btnY = 90 + cardH + 15;
+  const btnY = 90 + cardH + 15 - scrollY;
   Renderer.drawButton(100, btnY, 200, 50, t('toMain'), { bgColor: COLORS.ACCENT });
   game.registerClickArea('toMain', 100, btnY, 200, 50, () => { game.changeScreen(SCREENS.MAIN); });
 }

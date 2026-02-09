@@ -228,10 +228,12 @@ export class BattleManager {
     run.wrongByDifficulty[wrongDiff] = (run.wrongByDifficulty[wrongDiff] || 0) + 1;
 
     if (!monster._wrongCounts) monster._wrongCounts = {};
+    if (!monster._healCount) monster._healCount = 0;
     const qKey = monster.question || '_default';
     monster._wrongCounts[qKey] = (monster._wrongCounts[qKey] || 0) + 1;
 
-    if (monster._wrongCounts[qKey] >= 2) {
+    if (monster._wrongCounts[qKey] >= 2 && monster._healCount < 3) {
+      monster._healCount++;
       monster.hp = monster.maxHp;
       this.effects.floatingTexts.push({
         x: 200, y: 250,
@@ -468,7 +470,7 @@ export class BattleManager {
     }
   }
 
-  async showFullQuestion() {
+  showFullQuestion() {
     const monster = this.game.currentMonster;
     if (!monster) return;
 
@@ -476,6 +478,31 @@ export class BattleManager {
     const topic = monster.topic || '';
     const choices = monster.choices || [];
 
-    await this.game.dialogManager.showQuestionModal(question, topic, choices);
+    const existing = document.getElementById('question-modal');
+    if (existing) existing.remove();
+
+    const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const topicHtml = topic ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">📌 ${esc(topic)}</div>` : '';
+    const choicesHtml = choices.length > 0
+      ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">${
+          choices.map((c, i) => `<div style="padding:8px 12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-size:15px;line-height:1.4;color:#e2e8f0;"><span style="color:#818cf8;font-weight:bold;margin-right:6px;">${i+1}.</span>${esc(c)}</div>`).join('')
+        }</div>`
+      : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'question-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;justify-content:center;align-items:center;font-family:system-ui,-apple-system,sans-serif;';
+    modal.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:24px;width:340px;max-height:85vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
+      <div style="font-size:12px;font-weight:bold;color:#818cf8;margin-bottom:10px;text-align:center;">🔍 ${esc(t('questionLabel'))}</div>
+      ${topicHtml}
+      <div style="font-size:20px;font-weight:bold;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;">${esc(question)}</div>
+      ${choicesHtml}
+      <button id="q-modal-close" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;margin-top:14px;">${esc(t('close'))}</button>
+    </div>`;
+
+    document.body.appendChild(modal);
+    document.getElementById('q-modal-close').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   }
 }
