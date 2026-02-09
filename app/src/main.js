@@ -515,26 +515,38 @@ class App {
       }
     }, { passive: false });
 
-    // 방향키 스크롤 + ESC/Backspace 뒤로가기 + Android 뒤로가기
-    document.addEventListener('keydown', (e) => {
-      const isBack = e.key === 'Escape' ||
-        (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName));
-      if (isBack) {
+    // ESC/Backspace 뒤로가기 (캡처 단계에서 최우선 처리)
+    const handleBack = () => {
+      // 레벨진척도 모달 닫기
+      const levelModal = document.getElementById('level-modal');
+      if (levelModal) { levelModal.remove(); return; }
+      // 일반 모달 닫기
+      const customModal = document.getElementById('custom-modal');
+      if (customModal) { customModal.click(); return; }
+      // 서브 화면 → 메인 화면 (전투/결과 제외)
+      const screen = this.game.currentScreen;
+      if (screen !== SCREENS.MAIN && screen !== SCREENS.BATTLE && screen !== SCREENS.RESULT) {
+        this.game.changeScreen(SCREENS.MAIN);
+        this.game.render();
+      }
+    };
+
+    window.addEventListener('keydown', (e) => {
+      // ESC 처리 (keyCode 27 호환)
+      if (e.key === 'Escape' || e.keyCode === 27) {
         e.preventDefault();
-        // 레벨진척도 모달 닫기
-        const levelModal = document.getElementById('level-modal');
-        if (levelModal) { levelModal.remove(); return; }
-        // 일반 모달 닫기
-        const customModal = document.getElementById('custom-modal');
-        if (customModal) { customModal.click(); return; }
-        // 서브 화면 → 메인 화면 (전투/결과 제외 모든 화면)
-        const screen = this.game.currentScreen;
-        if (screen !== SCREENS.MAIN && screen !== SCREENS.BATTLE && screen !== SCREENS.RESULT) {
-          this.game.changeScreen(SCREENS.MAIN);
-          this.game.render();
-        }
+        e.stopPropagation();
+        handleBack();
         return;
       }
+      // Backspace 뒤로가기 (입력 필드 제외)
+      if ((e.key === 'Backspace' || e.keyCode === 8) &&
+          !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+        e.preventDefault();
+        handleBack();
+        return;
+      }
+      // 방향키 스크롤
       if (this.game.scrollMaxY > 0) {
         const step = 40;
         if (e.key === 'ArrowDown') {
@@ -547,7 +559,7 @@ class App {
           this.game.render();
         }
       }
-    });
+    }, true);  // true = 캡처 단계 (다른 핸들러보다 먼저 실행)
 
     // Android 뒤로가기 (popstate)
     history.pushState(null, '', location.href);
