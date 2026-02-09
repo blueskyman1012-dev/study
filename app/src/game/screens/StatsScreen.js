@@ -312,8 +312,77 @@ function renderSubjectTab(game, stats, ctx, startY) {
   }
   y += 240;
 
-  // ─── B. 과목별 문제유형 상세 ───
+  // ─── B. 유형별 오답률 TOP ───
   const subjectTopics = stats.subjectTopics || {};
+  const subjectInfo = {
+    math: SUBJECTS.MATH, english: SUBJECTS.ENGLISH,
+    korean: SUBJECTS.KOREAN, science: SUBJECTS.SCIENCE
+  };
+
+  // 전 과목 유형을 모아서 오답률 기준 정렬
+  const allTopicList = [];
+  for (const [subj, topicMap] of Object.entries(subjectTopics)) {
+    if (!topicMap) continue;
+    for (const [topic, d] of Object.entries(topicMap)) {
+      const attempts = d.attempts || 0;
+      const correct = d.correct || 0;
+      const wrong = attempts - correct;
+      if (attempts >= 2 && wrong > 0) {
+        const wrongRate = Math.round((wrong / attempts) * 100);
+        allTopicList.push({
+          topic, subject: subj, attempts, correct, wrong, wrongRate,
+          icon: subjectInfo[subj]?.icon || '📝',
+          color: subjectInfo[subj]?.color || COLORS.TEXT_PRIMARY
+        });
+      }
+    }
+  }
+  allTopicList.sort((a, b) => b.wrongRate - a.wrongRate || b.wrong - a.wrong);
+  const topItems = allTopicList.slice(0, 5);
+
+  if (topItems.length > 0) {
+    const topCardH = 44 + topItems.length * 30;
+    Renderer.drawGradientCard(20, y, 360, topCardH, 14, '#1a1a28', '#151520');
+    Renderer.roundRect(20, y, 360, topCardH, 14, null, 'rgba(239,68,68,0.25)');
+    Renderer.drawText('🚨 ' + t('stats_weakTopics'), 40, y + 16, {
+      font: 'bold 14px system-ui', color: COLORS.DANGER
+    });
+
+    let wy = y + 42;
+    for (const item of topItems) {
+      const label = item.topic.length > 6 ? item.topic.substring(0, 6) + '..' : item.topic;
+
+      // 과목 아이콘 + 유형명
+      Renderer.drawText(`${item.icon} ${label}`, 40, wy, {
+        font: '12px system-ui', color: COLORS.TEXT_PRIMARY
+      });
+
+      // 오답률 바
+      const barX = 155;
+      const barMaxW = 120;
+      const barW = Math.max(4, barMaxW * item.wrongRate / 100);
+      Renderer.roundRect(barX, wy - 2, barMaxW, 10, 5, 'rgba(255,255,255,0.06)');
+      Renderer.roundRect(barX, wy - 2, barW, 10, 5,
+        item.wrongRate >= 60 ? COLORS.DANGER : item.wrongRate >= 40 ? COLORS.WARNING : 'rgba(239,68,68,0.4)');
+
+      // 오답률 %
+      Renderer.drawText(`${item.wrongRate}%`, 295, wy, {
+        font: 'bold 12px system-ui',
+        color: item.wrongRate >= 60 ? COLORS.DANGER : item.wrongRate >= 40 ? COLORS.WARNING : COLORS.TEXT_SECONDARY,
+        align: 'center'
+      });
+
+      // 오답/시도
+      Renderer.drawText(`❌${item.wrong}/${item.attempts}`, 355, wy, {
+        font: '10px system-ui', color: COLORS.TEXT_SECONDARY, align: 'right'
+      });
+
+      wy += 30;
+    }
+    y += topCardH + 10;
+  }
+
+  // ─── C. 과목별 문제유형 상세 ───
 
   for (const subj of subjectEntries) {
     const topicMap = subjectTopics[subj.key];
