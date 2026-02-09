@@ -633,30 +633,6 @@ class App {
 // 앱 시작 (폰트 로드 후)
 const app = new App();
 
-// ESC/Backspace 뒤로가기 — 모듈 최상위 글로벌 핸들러
-window.onkeydown = function(e) {
-  if (!app.game) return;
-  const isEsc = e.key === 'Escape' || e.keyCode === 27;
-  const isBack = e.key === 'Backspace' || e.keyCode === 8;
-  if (!isEsc && !isBack) return;
-  if (isBack && ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
-
-  e.preventDefault();
-
-  // 모달 닫기
-  const levelModal = document.getElementById('level-modal');
-  if (levelModal) { levelModal.remove(); return; }
-  const customModal = document.getElementById('custom-modal');
-  if (customModal) { customModal.click(); return; }
-
-  // 서브 화면 → 메인 (전투/결과 제외)
-  const screen = app.game.currentScreen;
-  if (screen !== SCREENS.MAIN && screen !== SCREENS.BATTLE && screen !== SCREENS.RESULT) {
-    app.game.changeScreen(SCREENS.MAIN);
-    app.game._needsRender = true;
-  }
-};
-
 window.addEventListener('DOMContentLoaded', async () => {
   applyToHTML();
   await document.fonts.ready;

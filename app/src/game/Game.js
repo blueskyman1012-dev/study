@@ -72,6 +72,11 @@ export class Game {
     // 렌더링 최적화: dirty 플래그
     this._needsRender = true;
 
+    // 키보드 상태 (ESC 뒤로가기용)
+    this._keys = {};
+    this._escHandled = false;
+    document.onkeydown = (e) => { this._keys[e.key] = true; this._keys[e.keyCode] = true; };
+    document.onkeyup = (e) => { this._keys[e.key] = false; this._keys[e.keyCode] = false; };
   }
 
   async init() {
@@ -153,6 +158,26 @@ export class Game {
 
   // 업데이트
   update() {
+    // ESC 뒤로가기 (폴링 방식)
+    const escPressed = this._keys['Escape'] || this._keys[27];
+    if (escPressed && !this._escHandled) {
+      this._escHandled = true;
+      // 모달 먼저 닫기
+      const levelModal = document.getElementById('level-modal');
+      if (levelModal) { levelModal.remove(); }
+      else {
+        const customModal = document.getElementById('custom-modal');
+        if (customModal) { customModal.click(); }
+        else if (this.currentScreen !== SCREENS.MAIN &&
+                 this.currentScreen !== SCREENS.BATTLE &&
+                 this.currentScreen !== SCREENS.RESULT) {
+          this.changeScreen(SCREENS.MAIN);
+        }
+      }
+      this._needsRender = true;
+    }
+    if (!escPressed) this._escHandled = false;
+
     const hadEffects = this.effects.hasActiveEffects();
     this.effects.update();
 
