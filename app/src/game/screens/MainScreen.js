@@ -12,8 +12,6 @@ export function renderMainScreen(game) {
     game.playerManager.resetHp();
   }
 
-  Renderer.drawGrid();
-
   // 타이틀
   Renderer.drawText(t('title'), 200, 30, {
     font: 'bold 40px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center', stroke: true
@@ -66,20 +64,10 @@ export function renderMainScreen(game) {
   const totalDmg = game.playerManager.getTotalDamage();
   const inv = player.inventory || {};
 
-  Renderer.roundRect(20, 250, 175, 42, 12, COLORS.BG_CARD);
-  Renderer.drawText(`⚔️${totalDmg}`, 65, 267, { font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center', stroke: true });
-  Renderer.drawText(`🪶${inv.reviveTicket || 0}`, 155, 267, { font: 'bold 14px system-ui', color: COLORS.WARNING, align: 'center', stroke: true });
-
-  // 문제 보기 버튼 (독립 버튼)
-  Renderer.drawButton(205, 250, 175, 42, `📋 ${t('problemViewer')}`, {
-    bgColor: COLORS.BG_CARD, borderColor: 'rgba(99,102,241,0.4)', fontSize: 13, stroke: true
-  });
-  game.registerClickArea('problemViewer', 205, 250, 175, 42, () => {
-    game.showProblemViewer().catch(err => {
-      console.error('문제 보기 오류:', err);
-      game.showModal('오류: ' + err.message);
-    });
-  });
+  Renderer.roundRect(20, 250, 360, 42, 12, COLORS.BG_CARD);
+  Renderer.drawText(`⚔️${totalDmg}`, 80, 267, { font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center', stroke: true });
+  Renderer.drawText(`🪶${inv.reviveTicket || 0}`, 200, 267, { font: 'bold 14px system-ui', color: COLORS.WARNING, align: 'center', stroke: true });
+  Renderer.drawText(`💡${inv.hintTicket || 0}`, 320, 267, { font: 'bold 14px system-ui', color: COLORS.WARNING, align: 'center', stroke: true });
 
   // === 던전 입장 ===
   Renderer.drawButton(20, 310, 360, 65, t('enterDungeon'), { bgColor: COLORS.ACCENT, fontSize: 22, stroke: true });
@@ -87,12 +75,22 @@ export function renderMainScreen(game) {
 
   // ── y=390~460: HTML 오답등록 버튼 ──
 
+  // === 문제 보기 버튼 ===
+  Renderer.drawButton(20, 470, 360, 50, '📋 문제 보기', {
+    bgColor: '#1e3a5f', borderColor: '#38bdf8', fontSize: 17, stroke: true
+  });
+  game.registerClickArea('problemViewer', 20, 470, 360, 50, () => {
+    game.showProblemViewer().catch(err => {
+      game.showModal('오류: ' + err.message);
+    });
+  });
+
   // === 통계 & 상점 & 설정 & 업적 ===
   const menuBtnW = 85;
   const menuBtnH = 55;
   const menuBtnGap = 8;
   const menuStartX = 20;
-  const menuY = 480;
+  const menuY = 535;
 
   Renderer.drawButton(menuStartX, menuY, menuBtnW, menuBtnH, t('stats'), { bgColor: COLORS.BG_CARD, borderColor: '#38bdf8', fontSize: 15, stroke: true });
   game.registerClickArea('stats', menuStartX, menuY, menuBtnW, menuBtnH, () => game.changeScreen(SCREENS.STATS));
@@ -109,21 +107,21 @@ export function renderMainScreen(game) {
   // === AI 상태 ===
   const hasSmilePrintKey = problemGeneratorService.hasApiKey();
   if (hasSmilePrintKey) {
-    Renderer.drawButton(20, 555, 360, 48, t('aiGenerate'), {
+    Renderer.drawButton(20, 605, 360, 48, t('aiGenerate'), {
       bgColor: '#1d4ed8', borderColor: '#4b8df8', fontSize: 16, stroke: true
     });
-    game.registerClickArea('aiGenerate', 20, 555, 360, 48, () => game.showAIGenerateMenu());
+    game.registerClickArea('aiGenerate', 20, 605, 360, 48, () => game.showAIGenerateMenu());
   } else {
-    Renderer.roundRect(20, 555, 360, 40, 12, COLORS.BG_CARD);
+    Renderer.roundRect(20, 605, 360, 40, 12, COLORS.BG_CARD);
     const hasGemini = geminiService.hasApiKey();
     const aiStatus = hasGemini ? t('aiConnected') : t('aiNotConnected');
-    Renderer.drawText(aiStatus, 200, 570, {
+    Renderer.drawText(aiStatus, 200, 620, {
       font: '13px system-ui', color: hasGemini ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, align: 'center', stroke: true
     });
   }
 
   // 슬로건
-  Renderer.drawText(t('slogan'), 200, 665, {
+  Renderer.drawText(t('slogan'), 200, 670, {
     font: '14px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
   });
 }
