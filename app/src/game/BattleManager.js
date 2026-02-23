@@ -468,20 +468,30 @@ export class BattleManager {
     const monster = this.game.currentMonster;
     if (!monster) return;
 
-    // 원본 이미지가 있으면 원본 사용, 없으면 Canvas 카드 이미지 생성
-    const imgSrc = monster.imageData || renderProblemCard(monster);
+    const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // 이미지 생성 시도
+    let imgSrc = '';
+    try {
+      imgSrc = monster.imageData || renderProblemCard(monster);
+    } catch (e) {
+      imgSrc = '';
+    }
+
+    // 이미지 성공 시 이미지 표시, 실패 시 텍스트 표시
+    const contentHtml = imgSrc
+      ? `<img src="${imgSrc}" style="max-width:100%;border-radius:10px;border:1px solid rgba(99,102,241,0.3);" />`
+      : `<div style="padding:20px;font-size:16px;line-height:1.6;color:#e2e8f0;">${esc(monster.question || '문제 없음')}<br><br><b style="color:#22c55e;">정답: ${esc(monster.answer || '?')}</b></div>`;
 
     const existing = document.getElementById('question-modal');
     if (existing) existing.remove();
-
-    const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
     const modal = document.createElement('div');
     modal.id = 'question-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;justify-content:center;align-items:center;font-family:system-ui,-apple-system,sans-serif;';
     modal.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:16px;width:360px;max-height:85vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
       <div style="text-align:center;margin-bottom:12px;">
-        <img src="${imgSrc}" style="max-width:100%;border-radius:10px;border:1px solid rgba(99,102,241,0.3);" />
+        ${contentHtml}
       </div>
       <button id="q-modal-close" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${esc(t('close'))}</button>
     </div>`;
