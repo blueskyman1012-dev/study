@@ -19,12 +19,19 @@ export class AIGenerateManager {
     ]);
   }
 
-  // 생성 상태 강제 초기화 (안전장치)
-  _forceCleanup() {
+  // 생성 완료 후 즉시 메인화면 복귀 + 결과 모달 표시
+  _finishAndShowResult(resultMessage) {
     const game = this.game;
+    // 1) 생성 상태 해제
     game.isGenerating = false;
     game._needsRender = true;
     game._removeCancelOverlay();
+    // 2) 즉시 메인화면 전환
+    game.changeScreen(SCREENS.MAIN);
+    // 3) 결과 모달은 메인화면 위에 표시 (await 안함 = 화면전환 안 막힘)
+    if (resultMessage) {
+      game.showModal(resultMessage);
+    }
   }
 
   async promptApiKey() {
@@ -80,18 +87,13 @@ export class AIGenerateManager {
         }
       } catch (err) {
         resultMessage = t('error') + err.message;
-      } finally {
-        // 생성 상태 해제 + 오버레이 제거 (모달 표시 전에 반드시)
-        this._forceCleanup();
       }
-      if (resultMessage) {
-        await game.showModal(resultMessage);
-      }
+      // 즉시 메인화면 전환 + 결과 모달 (await 안함)
+      this._finishAndShowResult(resultMessage);
     } finally {
-      // 이중 안전장치: 어떤 경우에도 정리 보장
-      this._forceCleanup();
+      game.isGenerating = false;
+      game._removeCancelOverlay();
       this._aiGenerating = false;
-      game.changeScreen(SCREENS.MAIN);
     }
   }
 
@@ -101,7 +103,8 @@ export class AIGenerateManager {
     try {
       await this._doAIGenerateMenu();
     } finally {
-      this._forceCleanup();
+      this.game.isGenerating = false;
+      this.game._removeCancelOverlay();
       this._aiGenerating = false;
     }
   }
@@ -177,13 +180,8 @@ export class AIGenerateManager {
     } catch (err) {
       console.error('AI 문제 생성 오류:', err);
       resultMessage = t('error') + err.message;
-    } finally {
-      // 생성 상태 해제 + 오버레이 제거 (모달 표시 전에 반드시)
-      this._forceCleanup();
     }
-    if (resultMessage) {
-      await game.showModal(resultMessage);
-    }
-    game.changeScreen(SCREENS.MAIN);
+    // 즉시 메인화면 전환 + 결과 모달 (await 안함)
+    this._finishAndShowResult(resultMessage);
   }
 }

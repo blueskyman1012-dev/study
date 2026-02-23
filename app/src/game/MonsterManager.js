@@ -230,29 +230,84 @@ export class MonsterManager {
       return this._generateInequalityWrongAnswers(answer, ineqMatch);
     }
 
-    const wrongAnswers = [];
-    const num = parseFloat(answer);
-    if (!isNaN(num)) {
-      const variations = [
-        num + Math.floor(Math.random() * 5) + 1,
-        num - Math.floor(Math.random() * 5) - 1,
-        num * 2, num + 10, num - 10,
-        Math.abs(num) * -1, num + 0.5, num - 0.5
-      ];
-      const unique = [...new Set(variations.filter(v => v !== num))];
-      this.shuffleArray(unique);
-      for (let i = 0; i < 3 && i < unique.length; i++) {
-        wrongAnswers.push(String(unique[i]));
+    const answerStr = String(answer).trim();
+
+    // 숫자+단위 형식 (예: "10 m/s²", "20 N", "5 kg")
+    const unitMatch = answerStr.match(/^(-?\d+\.?\d*)\s*(.+)$/);
+    if (unitMatch && !/^[a-zA-Z가-힣]/.test(answerStr)) {
+      const numVal = parseFloat(unitMatch[1]);
+      const unit = unitMatch[2];
+      return this._generateNumericWrongAnswers(numVal).map(n => `${n} ${unit}`);
+    }
+
+    // 순수 숫자
+    const num = parseFloat(answerStr);
+    if (!isNaN(num) && String(num) === answerStr) {
+      return this._generateNumericWrongAnswers(num).map(String);
+    }
+
+    // 텍스트 답변 → 과학 용어 풀에서 오답 생성
+    return this._generateTextWrongAnswers(answerStr);
+  }
+
+  // 숫자 기반 오답 생성 (3개 반환)
+  _generateNumericWrongAnswers(num) {
+    const variations = [
+      num + Math.floor(Math.random() * 5) + 1,
+      num - Math.floor(Math.random() * 5) - 1,
+      num * 2, num + 10, num - 10,
+      Math.abs(num) * -1, num + 0.5, num - 0.5
+    ];
+    const unique = [...new Set(variations.filter(v => v !== num))];
+    this.shuffleArray(unique);
+    return unique.slice(0, 3);
+  }
+
+  // 텍스트 기반 오답 생성 (과학 용어 풀 활용)
+  _generateTextWrongAnswers(answer) {
+    const scienceTermGroups = [
+      ['미토콘드리아', '리보솜', '소포체', '골지체', '엽록체', '핵', '세포막', '리소좀', '중심체', '액포'],
+      ['DNA', 'RNA', 'mRNA', '단백질', '아미노산', '뉴클레오타이드', '염색체', '유전자'],
+      ['가속도', '속력', '변위', '관성', '힘', '질량', '운동량', '중력'],
+      ['양성자', '중성자', '전자', '쿼크', '뉴트리노', '광자', '원자핵'],
+      ['산소', '수소', '질소', '탄소', '헬륨', '네온', '철', '구리', '금'],
+      ['광합성', '호흡', '발효', '증산작용', '삼투', '확산', '능동수송'],
+      ['지진', '화산', '판구조론', '대류', '풍화', '침식', '퇴적', '단층'],
+      ['전압', '전류', '저항', '전력', '자기장', '전기장', '유도전류'],
+      ['질량 보존 법칙', '에너지 보존 법칙', '일정 성분비 법칙', '배수 비례 법칙', '기체 반응 법칙'],
+      ['등속 운동', '등가속도 운동', '포물선 운동', '원운동', '단진동', '자유낙하'],
+      ['공유 결합', '이온 결합', '금속 결합', '수소 결합', '반데르발스 힘'],
+      ['감수분열', '체세포분열', '수정', '발생', '분화', '생장']
+    ];
+
+    const answerLower = answer.toLowerCase();
+
+    // 정답이 속한 그룹 찾기
+    for (const group of scienceTermGroups) {
+      const idx = group.findIndex(term => term.toLowerCase() === answerLower || term === answer);
+      if (idx !== -1) {
+        const others = group.filter((_, i) => i !== idx);
+        this.shuffleArray(others);
+        return others.slice(0, 3);
       }
     }
-    while (wrongAnswers.length < 3) {
-      const randomNum = Math.floor(Math.random() * 100) + 1;
-      const randomStr = String(randomNum);
-      if (!wrongAnswers.includes(randomStr) && randomStr !== answer) {
-        wrongAnswers.push(randomStr);
-      }
+
+    // 그룹에 없으면 길이가 비슷한 용어들로 폴백
+    const allTerms = scienceTermGroups.flat();
+    const answerLen = answer.length;
+    const similarLength = allTerms
+      .filter(t => t !== answer && Math.abs(t.length - answerLen) <= 2)
+      .sort(() => Math.random() - 0.5);
+
+    if (similarLength.length >= 3) {
+      return similarLength.slice(0, 3);
     }
-    return wrongAnswers.slice(0, 3);
+
+    // 최종 폴백: 일반 과학 용어
+    const fallbackTerms = ['원자', '분자', '에너지', '파동', '전자', '세포', '유전자', '중력', '마찰력', '압력'];
+    const filtered = fallbackTerms.filter(t => t !== answer);
+    this.shuffleArray(filtered);
+    return filtered.slice(0, 3);
   }
 
   // 부등식 오답 생성 (부등호 방향/등호 변형)

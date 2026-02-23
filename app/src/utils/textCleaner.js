@@ -160,12 +160,59 @@ export function cleanQuestionText(text) {
   // 2. 영어 문장 괄호 제거: (Solve for x), (Choose the correct answer) 등
   //    3단어 이상 영어만으로 된 괄호 내용 제거 (수학 변수 f(x), sin(x) 등은 1-2단어라 유지)
   t = t.replace(/\(\s*(?:[A-Za-z]+\s+){2,}[A-Za-z.,!?]*\s*\)/g, '');
-  // 3. 마크다운 서식 제거: **bold** → bold, *italic* → italic
+  // 3. 마크다운 서식 제거: **bold** → bold, *italic* → italic, `code`
   t = t.replace(/\*\*(.+?)\*\*/g, '$1');
   t = t.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
+  t = t.replace(/`([^`]+)`/g, '$1');
   // 4. 문제 번호 접두어 제거: "1. ", "1) ", "Q1. ", "문제 1. " 등
   t = t.replace(/^(?:Q?\d+[.)]\s*|문제\s*\d*[.):：]?\s*)/i, '');
-  // 5. 연속 공백 정리
+  // 5. LaTeX 문법 → 읽을 수 있는 텍스트 변환
+  t = cleanLatex(t);
+  // 6. 독립적인 영어 문장 제거 (한글이 없는 줄 전체가 영어인 경우)
+  t = t.replace(/(?:^|\. )(?:[A-Z][a-z]+(?:\s+[a-z]+){2,}[.?!]?\s*)/g, '');
+  // 7. 연속 공백 정리
   t = t.replace(/\s{2,}/g, ' ').trim();
+  return t;
+}
+
+// LaTeX 문법 → 일반 텍스트 변환
+function cleanLatex(text) {
+  let t = text;
+  // \frac{a}{b} → a/b
+  t = t.replace(/\\frac\s*\{([^}]*)\}\s*\{([^}]*)\}/g, '$1/$2');
+  // \sqrt{x} → √x, \sqrt[n]{x} → n√x
+  t = t.replace(/\\sqrt\s*\[([^\]]*)\]\s*\{([^}]*)\}/g, '$1√$2');
+  t = t.replace(/\\sqrt\s*\{([^}]*)\}/g, '√$1');
+  // \times → ×, \div → ÷, \cdot → ·, \pm → ±
+  t = t.replace(/\\times/g, '×');
+  t = t.replace(/\\div/g, '÷');
+  t = t.replace(/\\cdot/g, '·');
+  t = t.replace(/\\pm/g, '±');
+  // \pi → π, \alpha → α, \beta → β, \theta → θ, \infty → ∞
+  t = t.replace(/\\pi/g, 'π');
+  t = t.replace(/\\alpha/g, 'α');
+  t = t.replace(/\\beta/g, 'β');
+  t = t.replace(/\\theta/g, 'θ');
+  t = t.replace(/\\infty/g, '∞');
+  // \leq → ≤, \geq → ≥, \neq → ≠, \le → ≤, \ge → ≥
+  t = t.replace(/\\leq/g, '≤');
+  t = t.replace(/\\geq/g, '≥');
+  t = t.replace(/\\neq/g, '≠');
+  t = t.replace(/\\le(?![a-z])/g, '≤');
+  t = t.replace(/\\ge(?![a-z])/g, '≥');
+  // \left, \right, \text{} → 내용만
+  t = t.replace(/\\(?:left|right)[()[\]{}|.]/g, '');
+  t = t.replace(/\\text\s*\{([^}]*)\}/g, '$1');
+  // \quad, \; \, \! → 공백
+  t = t.replace(/\\(?:quad|;|,|!)/g, ' ');
+  // ^{n} → ^n, _{n} → _n (중괄호 제거)
+  t = t.replace(/\^\{([^}]*)\}/g, '^$1');
+  t = t.replace(/_\{([^}]*)\}/g, '$1');
+  // $ 기호 제거 (인라인 수식 감싸기)
+  t = t.replace(/\$/g, '');
+  // 남은 백슬래시 명령어 제거: \command → 빈 문자열
+  t = t.replace(/\\[a-zA-Z]+/g, '');
+  // 남은 중괄호 제거
+  t = t.replace(/[{}]/g, '');
   return t;
 }
