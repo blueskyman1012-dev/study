@@ -20,6 +20,7 @@ class App {
     this.game = null;
     this.registerBtn = null;
     this.problemViewerBtn = null;
+    this.battleImageBtn = null;
     this.cameraInput = null;
     this.cameraModal = null;
     this.cameraVideo = null;
@@ -189,9 +190,11 @@ class App {
     // iOS 호환 버튼 초기화
     this.registerBtn = document.getElementById('register-btn');
     this.problemViewerBtn = document.getElementById('problem-viewer-btn');
+    this.battleImageBtn = document.getElementById('battle-image-btn');
     this.cameraInput = document.getElementById('camera-input');
     this.setupCameraInput();
     this.setupProblemViewerBtn();
+    this.setupBattleImageBtn();
 
     // 렌더러 초기화
     Renderer.init(this.ctx, GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT);
@@ -362,6 +365,16 @@ class App {
         this.game.showProblemViewer().catch(err => {
           this.game.showModal('오류: ' + err.message);
         });
+      }
+    });
+  }
+
+  // 전투 중 이미지로 보기 버튼 설정
+  setupBattleImageBtn() {
+    if (!this.battleImageBtn) return;
+    this.battleImageBtn.addEventListener('click', () => {
+      if (this.game && this.game.battleManager) {
+        this.game.battleManager.showFullQuestion();
       }
     });
   }
@@ -639,6 +652,25 @@ class App {
         }
       } else {
         this.problemViewerBtn.classList.remove('visible');
+      }
+    }
+
+    // 전투 중 이미지로 보기 버튼
+    if (this.battleImageBtn) {
+      const isBattle = this.game.currentScreen === SCREENS.BATTLE;
+      if (isBattle) {
+        this.battleImageBtn.classList.add('visible');
+        if (this._cachedRect) {
+          const s = this._cachedScale;
+          const r = this._cachedRect;
+          this.battleImageBtn.style.left = `${r.left + 20 * s}px`;
+          this.battleImageBtn.style.top = `${r.top + 388 * s}px`;
+          this.battleImageBtn.style.width = `${360 * s}px`;
+          this.battleImageBtn.style.height = `${34 * s}px`;
+          this.battleImageBtn.style.fontSize = `${15 * s}px`;
+        }
+      } else {
+        this.battleImageBtn.classList.remove('visible');
       }
     }
 

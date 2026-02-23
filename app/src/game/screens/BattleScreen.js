@@ -126,12 +126,7 @@ export function renderBattleScreen(game) {
     Renderer.drawText(line, 200, startY + i * lineHeight, { font: `bold ${fontSize}px system-ui`, align: 'center' });
   });
 
-  // 이미지로 보기 버튼
-  const imgBtnY = qCardY + qCardH + 6;
-  Renderer.drawButton(20, imgBtnY, 360, 36, '📷 이미지로 보기', {
-    bgColor: '#1e40af', borderColor: '#60a5fa', fontSize: 15, stroke: true
-  });
-  game.registerClickArea('viewQuestion', 20, imgBtnY, 360, 36, () => game.battleManager.showFullQuestion());
+  // ── y=388~424: HTML 이미지로 보기 버튼 ──
 
   // 선택지
   const choices = monster.choices || ['①', '②', '③', '④'];
@@ -140,7 +135,7 @@ export function renderBattleScreen(game) {
   const gapX = 10;
   const gapY = 8;
   const startX = 20;
-  const choiceStartY = 428;
+  const choiceStartY = 425;
 
   choices.forEach((choice, i) => {
     const col = i % 2;
