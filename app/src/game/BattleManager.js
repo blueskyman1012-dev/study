@@ -5,6 +5,7 @@ import { geminiService } from '../services/GeminiService.js';
 import { problemGeneratorService } from '../services/ProblemGeneratorService.js';
 import { StatsManager } from './StatsManager.js';
 import { t } from '../i18n/i18n.js';
+import { renderProblemCard } from '../utils/textCleaner.js';
 
 export class BattleManager {
   constructor(game) {
@@ -467,40 +468,25 @@ export class BattleManager {
     const monster = this.game.currentMonster;
     if (!monster) return;
 
-    const question = monster.question || t('noQuestion');
-    const topic = monster.topic || '';
-    const choices = monster.choices || [];
-    const imageData = monster.imageData || '';
+    // 원본 이미지가 있으면 원본 사용, 없으면 Canvas 카드 이미지 생성
+    const imgSrc = monster.imageData || renderProblemCard(monster);
 
     const existing = document.getElementById('question-modal');
     if (existing) existing.remove();
 
     const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-    const topicHtml = topic ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">📌 ${esc(topic)}</div>` : '';
-    const imageHtml = imageData
-      ? `<div style="margin-bottom:12px;text-align:center;"><img src="${imageData}" style="max-width:100%;max-height:240px;border-radius:8px;border:1px solid rgba(99,102,241,0.3);object-fit:contain;background:#0f0f23;" /></div>`
-      : '';
-    const choicesHtml = choices.length > 0
-      ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">${
-          choices.map((c, i) => `<div style="padding:8px 12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-size:15px;line-height:1.4;color:#e2e8f0;"><span style="color:#818cf8;font-weight:bold;margin-right:6px;">${i+1}.</span>${esc(c)}</div>`).join('')
-        }</div>`
-      : '';
-
     const modal = document.createElement('div');
     modal.id = 'question-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;justify-content:center;align-items:center;font-family:system-ui,-apple-system,sans-serif;';
-    modal.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:24px;width:340px;max-height:85vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
-      <div style="font-size:12px;font-weight:bold;color:#818cf8;margin-bottom:10px;text-align:center;">🔍 ${esc(t('questionLabel'))}</div>
-      ${topicHtml}
-      ${imageHtml}
-      <div style="font-size:20px;font-weight:bold;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;">${esc(question)}</div>
-      ${choicesHtml}
-      <button id="q-modal-close" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;margin-top:14px;">${esc(t('close'))}</button>
+    modal.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:16px;width:360px;max-height:85vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
+      <div style="text-align:center;margin-bottom:12px;">
+        <img src="${imgSrc}" style="max-width:100%;border-radius:10px;border:1px solid rgba(99,102,241,0.3);" />
+      </div>
+      <button id="q-modal-close" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;">${esc(t('close'))}</button>
     </div>`;
 
     // 모달 열린 동안 타이머 일시정지
-    const savedLastTime = this.game.lastTime;
     this.game.lastTime = -1;
 
     const closeModal = () => {
