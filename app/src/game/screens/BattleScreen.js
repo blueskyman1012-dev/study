@@ -181,33 +181,40 @@ export function renderBattleScreen(game) {
     });
   }
 
-  // 하단 버튼 (반투명 → 그리드 배경 투과)
+  // 하단 버튼 (반투명 → 그리드 배경 투과) — 5개 버튼
   Renderer.roundRect(0, 600, 400, 100, 0, 'rgba(18,18,26,0.85)');
+
+  // 📷 문제 이미지 보기
+  Renderer.drawButton(8, 620, 50, 46, '📷', {
+    bgColor: 'rgba(59,130,246,0.2)', borderColor: 'rgba(59,130,246,0.6)',
+    textColor: '#60a5fa', fontSize: 18
+  });
+  game.registerClickArea('viewImage', 8, 620, 50, 46, () => game.battleManager.showFullQuestion());
 
   const hintCount = player.inventory?.hintTicket || 0;
   const hasHint = hintCount > 0;
-  Renderer.drawButton(8, 620, 88, 46, `💡${hintCount}`, {
+  Renderer.drawButton(64, 620, 78, 46, `💡${hintCount}`, {
     bgColor: hasHint ? 'rgba(251,191,36,0.2)' : 'rgba(100,100,100,0.15)',
     borderColor: hasHint ? 'rgba(251,191,36,0.6)' : 'rgba(100,100,100,0.3)',
     textColor: hasHint ? COLORS.WARNING : COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('hint', 8, 620, 88, 46, () => game.battleManager.useHint());
+  game.registerClickArea('hint', 64, 620, 78, 46, () => game.battleManager.useHint());
 
   const hasTimeBoost = (player.inventory?.timeBoost || 0) > 0;
-  Renderer.drawButton(104, 620, 88, 46, `⏰${player.inventory?.timeBoost || 0}`, {
+  Renderer.drawButton(148, 620, 78, 46, `⏰${player.inventory?.timeBoost || 0}`, {
     bgColor: hasTimeBoost ? 'rgba(34,197,94,0.2)' : 'rgba(100,100,100,0.15)',
     borderColor: hasTimeBoost ? 'rgba(34,197,94,0.6)' : 'rgba(100,100,100,0.3)',
     textColor: hasTimeBoost ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, fontSize: 14
   });
-  game.registerClickArea('timeBoost', 104, 620, 88, 46, () => game.battleManager.useTimeBoost());
+  game.registerClickArea('timeBoost', 148, 620, 78, 46, () => game.battleManager.useTimeBoost());
 
-  Renderer.drawButton(200, 620, 88, 46, t('skip'), {
+  Renderer.drawButton(232, 620, 78, 46, t('skip'), {
     bgColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.5)', textColor: COLORS.DANGER, fontSize: 14
   });
-  game.registerClickArea('skip', 200, 620, 88, 46, () => game.battleManager.skipQuestion());
+  game.registerClickArea('skip', 232, 620, 78, 46, () => game.battleManager.skipQuestion());
 
-  Renderer.drawButton(296, 620, 96, 46, t('quit'), {
+  Renderer.drawButton(316, 620, 78, 46, t('quit'), {
     bgColor: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.5)', textColor: COLORS.ACCENT_LIGHT, fontSize: 14
   });
-  game.registerClickArea('quit', 296, 620, 96, 46, () => game.endRun(false));
+  game.registerClickArea('quit', 316, 620, 78, 46, () => game.endRun(false));
 }
