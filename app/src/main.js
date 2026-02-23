@@ -20,7 +20,6 @@ class App {
     this.game = null;
     this.registerBtn = null;
     this.problemViewerBtn = null;
-    this.battleImageBtn = null; // _createBattleImageBtn에서 생성
     this.cameraInput = null;
     this.cameraModal = null;
     this.cameraVideo = null;
@@ -193,7 +192,6 @@ class App {
     this.cameraInput = document.getElementById('camera-input');
     this.setupCameraInput();
     this.setupProblemViewerBtn();
-    this._createBattleImageBtn();
 
     // 렌더러 초기화
     Renderer.init(this.ctx, GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT);
@@ -366,43 +364,6 @@ class App {
         });
       }
     });
-  }
-
-  // 전투 중 이미지로 보기 버튼 (JS 동적 생성)
-  _createBattleImageBtn() {
-    const btn = document.createElement('button');
-    btn.id = 'battle-image-btn';
-    btn.textContent = '📷 이미지로 보기';
-    btn.style.cssText = [
-      'position:fixed',
-      'bottom:16px',
-      'left:50%',
-      'transform:translateX(-50%)',
-      'width:240px',
-      'height:48px',
-      'background:linear-gradient(135deg,#1e40af,#2563eb)',
-      'border:3px solid #60a5fa',
-      'border-radius:24px',
-      'color:#fff',
-      'font-size:17px',
-      'font-weight:bold',
-      'z-index:9999',
-      'display:none',
-      'align-items:center',
-      'justify-content:center',
-      'cursor:pointer',
-      'touch-action:manipulation',
-      'box-shadow:0 4px 20px rgba(37,99,235,0.7)',
-      'font-family:Pretendard,system-ui,sans-serif',
-      '-webkit-tap-highlight-color:transparent'
-    ].join(';');
-    btn.addEventListener('click', () => {
-      if (this.game && this.game.battleManager) {
-        this.game.battleManager.showFullQuestion();
-      }
-    });
-    document.body.appendChild(btn);
-    this.battleImageBtn = btn;
   }
 
   setupCanvas() {
@@ -679,11 +640,6 @@ class App {
       } else {
         this.problemViewerBtn.classList.remove('visible');
       }
-    }
-
-    // 전투 중 이미지로 보기 버튼 (fixed, style.display 직접 제어)
-    if (this.battleImageBtn) {
-      this.battleImageBtn.style.display = (this.game.currentScreen === SCREENS.BATTLE) ? 'flex' : 'none';
     }
 
     // 로그아웃 버튼
