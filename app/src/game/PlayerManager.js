@@ -42,7 +42,7 @@ export class PlayerManager {
 
     // 마이그레이션 후 서버에도 즉시 동기화
     if (cosmeticsMigrated && apiService.isLoggedIn()) {
-      apiService.putPlayer(this.player).catch(() => {});
+      apiService.putPlayer(this.player).catch(e => console.warn('서버 동기화 실패:', e.message));
     }
   }
 
@@ -138,7 +138,6 @@ export class PlayerManager {
     if (this.player.level >= LEVEL_CONFIG.maxLevel) return;
 
     this.player.exp += amount;
-    console.log(`✨ 경험치 +${amount} (현재: ${this.player.exp})`);
 
     while (this.player.exp >= this.getExpForLevel(this.player.level) &&
            this.player.level < LEVEL_CONFIG.maxLevel) {
@@ -150,7 +149,6 @@ export class PlayerManager {
       this.player.currentHp = Math.min(this.player.currentHp + (this.player.maxHp - oldMaxHp), this.player.maxHp);
 
       SoundService.playLevelUp();
-      console.log(`🎉 레벨업! LV.${this.player.level}`);
 
       let bonusMsg = this.getLevelUpBonusMessage() || `HP +${LEVEL_CONFIG.hpPerLevel}`;
 
@@ -195,7 +193,7 @@ export class PlayerManager {
     if (apiService.isLoggedIn()) {
       if (this._saveTimer) clearTimeout(this._saveTimer);
       this._saveTimer = setTimeout(() => {
-        apiService.putPlayer(this.player).catch(() => {});
+        apiService.putPlayer(this.player).catch(e => console.warn('서버 동기화 실패:', e.message));
       }, 1000);
     }
   }

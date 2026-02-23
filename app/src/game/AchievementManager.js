@@ -114,7 +114,6 @@ export class AchievementManager {
     }
 
     await this.game.playerManager.save();
-    console.log(`🏆 업적 해제: ${achv.id} (+${achv.reward}G${achv.rewardExp ? ` +${achv.rewardExp}EXP` : ''})`);
   }
 
   async claimDailyReward(index) {

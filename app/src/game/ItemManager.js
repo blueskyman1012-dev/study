@@ -78,7 +78,6 @@ export class ItemManager {
 
   onItemDrop(item, game) {
     const player = game.playerManager.player;
-    console.log(`🎁 아이템 드랍: ${item.name} (${t(item.rarity.nameKey)})`);
 
     SoundService.playItemDrop(item.rarity.id);
 

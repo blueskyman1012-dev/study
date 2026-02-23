@@ -170,19 +170,14 @@ export class BattleManager {
     }
     monster.currentQuestionIndex = nextIdx;
 
-    const nextQ = monster.questions[nextIdx];
-    if (!nextQ) {
+    if (!monster.questions[nextIdx]) {
       console.warn('문제를 찾을 수 없음, 인덱스 0으로 폴백');
       nextIdx = 0;
       monster.currentQuestionIndex = 0;
     }
-    const safeQ = monster.questions[nextIdx] || monster.questions[0];
+    const safeQ = monster.questions[nextIdx];
     if (!safeQ) return;
-    monster.question = safeQ.question;
-    monster.answer = safeQ.answer;
-    monster.choices = safeQ.choices || [];
-    monster.correctIndex = safeQ.correctIndex || 0;
-    monster.explanation = safeQ.explanation || '';
+    Object.assign(monster, this.monsterManager._toQuestionObj(safeQ));
 
     // _prepareChoices: 부등식 답 변환 + 선택지 생성 + 셔플
     this.monsterManager._prepareChoices(monster);
@@ -475,6 +470,7 @@ export class BattleManager {
     const question = monster.question || t('noQuestion');
     const topic = monster.topic || '';
     const choices = monster.choices || [];
+    const imageData = monster.imageData || '';
 
     const existing = document.getElementById('question-modal');
     if (existing) existing.remove();
@@ -482,6 +478,9 @@ export class BattleManager {
     const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
     const topicHtml = topic ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">📌 ${esc(topic)}</div>` : '';
+    const imageHtml = imageData
+      ? `<div style="margin-bottom:12px;text-align:center;"><img src="${imageData}" style="max-width:100%;max-height:240px;border-radius:8px;border:1px solid rgba(99,102,241,0.3);object-fit:contain;background:#0f0f23;" /></div>`
+      : '';
     const choicesHtml = choices.length > 0
       ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">${
           choices.map((c, i) => `<div style="padding:8px 12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-size:15px;line-height:1.4;color:#e2e8f0;"><span style="color:#818cf8;font-weight:bold;margin-right:6px;">${i+1}.</span>${esc(c)}</div>`).join('')
@@ -494,13 +493,23 @@ export class BattleManager {
     modal.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:16px;padding:24px;width:340px;max-height:85vh;overflow-y:auto;color:#e2e8f0;border:1px solid #6366f1;">
       <div style="font-size:12px;font-weight:bold;color:#818cf8;margin-bottom:10px;text-align:center;">🔍 ${esc(t('questionLabel'))}</div>
       ${topicHtml}
+      ${imageHtml}
       <div style="font-size:20px;font-weight:bold;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;">${esc(question)}</div>
       ${choicesHtml}
       <button id="q-modal-close" style="width:100%;padding:12px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:16px;font-weight:bold;cursor:pointer;margin-top:14px;">${esc(t('close'))}</button>
     </div>`;
 
+    // 모달 열린 동안 타이머 일시정지
+    const savedLastTime = this.game.lastTime;
+    this.game.lastTime = -1;
+
+    const closeModal = () => {
+      modal.remove();
+      this.game.lastTime = Date.now();
+    };
+
     document.body.appendChild(modal);
-    document.getElementById('q-modal-close').onclick = () => modal.remove();
-    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    document.getElementById('q-modal-close').onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
   }
 }

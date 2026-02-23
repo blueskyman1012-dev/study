@@ -45,7 +45,7 @@ export class DataManager {
       game.playerManager.player.currentHp = game.playerManager.player.maxHp;
       game.achievementManager.initDailyMissions();
       if (apiService.isLoggedIn()) {
-        apiService.putPlayer(newPlayer).catch(() => {});
+        apiService.putPlayer(newPlayer).catch(e => console.warn('서버 동기화 실패:', e.message));
       }
       safeRemoveItem('guide_shown');
 

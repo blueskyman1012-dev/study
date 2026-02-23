@@ -2,6 +2,7 @@
 // 문제 이미지 분석용
 import { apiService } from './ApiService.js';
 import { secureGetItem, secureSetItem } from '../utils/storage.js';
+import { cleanQuestionText } from '../utils/textCleaner.js';
 
 const API_BASE_URL = 'https://caricature-api-rust.wizice.com';
 const DEFAULT_MODEL = 'gemini-2.0-flash';
@@ -91,7 +92,8 @@ export class ImageAnalysisService {
 - answers: 정답 배열 (복수 정답 지원)
 - choices[0]은 반드시 정답과 동일
 - explanation: 단계별 풀이 과정
-- formula: 관련 공식 (없으면 빈 문자열)`;
+- formula: 관련 공식 (없으면 빈 문자열)
+- question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)`;
   }
 
   // 이미지 분석 요청 (비동기 Job 생성)
@@ -297,7 +299,11 @@ export class ImageAnalysisService {
       // JSON 블록 추출
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.question) {
+          parsed.question = cleanQuestionText(parsed.question);
+        }
+        return parsed;
       }
       return null;
     } catch (e) {

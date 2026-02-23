@@ -33,8 +33,6 @@ class App {
   }
 
   async init() {
-    console.log('🎮 오답헌터 초기화 중...');
-
     // 로그아웃 버튼 (항상 등록)
     document.getElementById('logout-btn').addEventListener('click', () => this.logout());
 
@@ -205,10 +203,8 @@ class App {
     // 로그인 상태면 서버에서 데이터 다운로드
     if (apiService.isLoggedIn()) {
       try {
-        console.log('📤 로컬→서버 업로드 중...');
         await apiService.uploadMonsters(this.db);
 
-        console.log('📥 서버 데이터 동기화 중...');
         const [,,,keys] = await Promise.all([
           apiService.downloadPlayerData(this.db),
           apiService.downloadMonsters(this.db),
@@ -219,15 +215,12 @@ class App {
           if (keys.smileprint_api_key) {
             imageAnalysisService.apiKey = keys.smileprint_api_key;
             secureSetItem('smileprint_api_key', keys.smileprint_api_key);
-            console.log('🔑 SmilePrint API 키 복원됨');
           }
           if (keys.gemini_api_key) {
             geminiService.apiKey = keys.gemini_api_key;
             secureSetItem('gemini_api_key', keys.gemini_api_key);
-            console.log('🔑 Gemini API 키 복원됨');
           }
         }
-        console.log('✅ 서버 데이터 동기화 완료');
       } catch (err) {
         console.warn('서버 동기화 실패, 로컬 데이터 사용:', err.message);
       }
@@ -251,7 +244,6 @@ class App {
     }
     this.gameLoop();
 
-    console.log('🎮 오답헌터 시작!');
   }
 
   // 카메라 설정 (iOS/Android 분기)
@@ -550,7 +542,6 @@ class App {
 
     this._syncing = true;
     try {
-      console.log('🔄 탭 복귀 - 서버 동기화 중...');
       await apiService.downloadPlayerData(this.db);
       await apiService.downloadMonsters(this.db);
       await apiService.downloadRuns(this.db);
@@ -558,7 +549,6 @@ class App {
       await this.game.monsterManager.loadMonsters();
       this.lastSyncTime = Date.now();
       this.game.render();
-      console.log('✅ 탭 복귀 동기화 완료');
     } catch (err) {
       console.warn('탭 복귀 동기화 실패:', err.message);
     } finally {

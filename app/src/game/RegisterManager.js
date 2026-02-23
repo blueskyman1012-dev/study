@@ -42,10 +42,13 @@ export class RegisterManager {
     try {
     if (imageAnalysisService.hasApiKey()) {
       try {
+        game._generationCancelled = false;
         game.isGenerating = true;
         game.generatingMessage = t('analyzing', 'SmilePrint');
         game.generatingSubMessage = t('analyzingDesc');
-        const result = await imageAnalysisService.analyze(imageData, subjectId);
+        game._needsRender = true;
+        const result = await Promise.race([imageAnalysisService.analyze(imageData, subjectId), new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))]);
+        if (game._generationCancelled) { return; }
         if (result && result.success && result.question) {
           question = result.question; answer = result.answer || '';
           choices = result.choices || []; correctIndex = result.correctIndex || 0;
@@ -72,7 +75,7 @@ export class RegisterManager {
         if (geminiService.hasApiKey()) {
           try {
             game.generatingMessage = t('analyzing', 'Gemini');
-            const result = await geminiService.analyzeImage(imageData, subjectName);
+            const result = await Promise.race([geminiService.analyzeImage(imageData, subjectName), new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))]);
             game.isGenerating = false;
             if (result && result.question) {
               question = result.question; answer = result.answer || '';
@@ -102,10 +105,13 @@ export class RegisterManager {
       }
     } else if (geminiService.hasApiKey()) {
       try {
+        game._generationCancelled = false;
         game.isGenerating = true;
         game.generatingMessage = t('analyzing', 'Gemini');
         game.generatingSubMessage = t('analyzingDesc');
-        const result = await geminiService.analyzeImage(imageData, subjectName);
+        game._needsRender = true;
+        const result = await Promise.race([geminiService.analyzeImage(imageData, subjectName), new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))]);
+        if (game._generationCancelled) { return; }
         game.isGenerating = false;
         if (result && result.question) {
           question = result.question; answer = result.answer || '';

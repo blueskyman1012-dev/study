@@ -1,10 +1,13 @@
 // Gemini AI 서비스
 import { apiService } from './ApiService.js';
 import { secureGetItem, secureSetItem } from '../utils/storage.js';
+import { cleanQuestionText } from '../utils/textCleaner.js';
 // 텍스트 전용
 const GEMINI_TEXT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 // 이미지 분석용 (Vision 지원)
 const GEMINI_VISION_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+// 이미지 생성용 (Native Image Generation)
+const GEMINI_IMAGE_GEN_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
 export class GeminiService {
   constructor(apiKey) {
@@ -64,6 +67,7 @@ export class GeminiService {
 5. 정답은 반드시 찾아서 answer에 넣으세요
 6. correctIndex는 choices 배열에서 정답의 위치 (0부터 시작)
 7. 부등식 문제: 정답은 반드시 부등식 표현으로 (예: "x > 4", "x ≤ -3"). 경계값 숫자만 쓰지 마세요.
+8. question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)
 
 JSON 형식:
 {
@@ -203,6 +207,7 @@ JSON 형식:
 2. 난이도: 쉬움 1개, 보통 1개, 어려움 1개
 3. 각 문제에 4지선다 보기 포함
 4. 수능/모의고사 스타일로 출제${inequalityRule}
+5. question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)
 
 다음 JSON 형식으로만 응답하세요:
 {
@@ -241,6 +246,7 @@ JSON만 출력하고 다른 텍스트는 포함하지 마세요.
 2. 다양한 난이도 (쉬움~어려움)
 3. 4지선다 객관식
 4. 고등학생 수준${inequalityRule}
+5. question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)
 
 다음 JSON 형식으로만 응답하세요:
 {
@@ -299,13 +305,71 @@ JSON만 출력하세요.
     return await this.generateContent(prompt);
   }
 
+  // 문제 텍스트 → 이미지 카드 생성 (Gemini Image Generation)
+  async generateProblemImage(question, choices = [], answer = '', topic = '') {
+    if (!this.apiKey) return null;
+
+    const choicesText = choices.length > 0
+      ? `\n보기:\n${choices.map((c, i) => `  ${i + 1}. ${c}`).join('\n')}`
+      : '';
+
+    const prompt = `아래 시험 문제를 깔끔한 시험지 스타일 이미지로 만들어주세요.
+
+${topic ? `[${topic}]` : ''}
+${question}${choicesText}
+
+규칙:
+- 흰색 배경, 검은색 텍스트
+- 수학 기호와 공식은 정확하게 렌더링
+- 한국어 시험지 느낌으로 깔끔하게
+- 정답은 표시하지 마세요`;
+
+    try {
+      const response = await fetch(GEMINI_IMAGE_GEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ['IMAGE', 'TEXT'],
+            temperature: 0.4
+          }
+        })
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+      return null;
+    } catch (e) {
+      console.warn('문제 이미지 생성 실패:', e.message);
+      return null;
+    }
+  }
+
   // JSON 파싱 헬퍼
   parseJSON(text) {
     try {
       // JSON 블록 추출
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        // question 필드 정제
+        if (parsed.question) {
+          parsed.question = cleanQuestionText(parsed.question);
+        }
+        if (parsed.problems) {
+          parsed.problems.forEach(p => {
+            if (p.question) p.question = cleanQuestionText(p.question);
+          });
+        }
+        return parsed;
       }
       return null;
     } catch (e) {

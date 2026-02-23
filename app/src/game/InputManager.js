@@ -35,9 +35,25 @@ export class InputManager {
 
   handleInput(x, y) {
     if (this._isTouchScrolling) return;
-    if (this.game.isGenerating) return;
+
+    // isGenerating 중에는 취소 버튼만 허용
+    if (this.game.isGenerating) {
+      for (const area of this.clickAreas) {
+        if (area.id === 'cancelGeneration' &&
+            x >= area.x && x <= area.x + area.width &&
+            y >= area.y && y <= area.y + area.height) {
+          area.callback(x, y);
+          return;
+        }
+      }
+      return;
+    }
 
     const now = Date.now();
+    // 모달 닫힌 직후 고스트 클릭 방지 (400ms 쿨다운)
+    const dm = this.game.dialogManager;
+    if (dm && dm._lastDismissTime && now - dm._lastDismissTime < 400) return;
+
     if (this._lastInputTime && now - this._lastInputTime < 200) return;
     this._lastInputTime = now;
 

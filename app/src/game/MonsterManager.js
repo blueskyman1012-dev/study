@@ -278,6 +278,33 @@ export class MonsterManager {
     return array;
   }
 
+  // 몬스터/질문 소스 → 질문 객체 변환
+  _toQuestionObj(src, extraProps) {
+    return {
+      question: src.question, answer: src.answer,
+      choices: src.choices || [], correctIndex: src.correctIndex || 0,
+      explanation: src.explanation || '',
+      ...extraProps
+    };
+  }
+
+  // AI 생성 문제 추가 + 선택지 검증
+  _pushGeneratedProblem(target, p, maxCount, defaultDifficulty) {
+    if (target.length >= maxCount || !p.question || !p.answer) return;
+    let choices = p.choices || [];
+    let correctIndex = p.correctIndex || 0;
+    if (choices.length > 0 && !choices.includes(p.answer)) {
+      choices[0] = p.answer;
+      correctIndex = 0;
+    }
+    target.push({
+      question: p.question, answer: p.answer,
+      choices, correctIndex,
+      explanation: p.explanation || '',
+      ...(defaultDifficulty != null ? { difficulty: p.difficulty || defaultDifficulty } : {})
+    });
+  }
+
   // 보스 난이도 보장
   _ensureBossDifficulty(monster) {
     if ((monster.difficulty || 1) >= 2) return;
@@ -316,7 +343,6 @@ export class MonsterManager {
 
   async _generateBossQuestion(monster) {
     try {
-      console.log('🤖 보스용 난이도 중 이상 문제 생성 중...');
       let problems = null;
 
       if (problemGeneratorService.hasApiKey()) {
@@ -331,27 +357,11 @@ export class MonsterManager {
 
       if (problems && problems.length > 0) {
         if (!monster.questions) {
-          monster.questions = [{
-            question: monster.question, answer: monster.answer,
-            choices: monster.choices || [], correctIndex: monster.correctIndex || 0,
-            explanation: monster.explanation || '', difficulty: monster.difficulty || 1
-          }];
+          monster.questions = [this._toQuestionObj(monster, { difficulty: monster.difficulty || 1 })];
         }
 
         for (const p of problems) {
-          if (monster.questions.length < 10 && p.question && p.answer) {
-            let choices = p.choices || [];
-            let correctIndex = p.correctIndex || 0;
-            if (choices.length > 0 && !choices.includes(p.answer)) {
-              choices[0] = p.answer;
-              correctIndex = 0;
-            }
-            monster.questions.push({
-              question: p.question, answer: p.answer,
-              choices, correctIndex,
-              explanation: p.explanation || '', difficulty: p.difficulty || 3
-            });
-          }
+          this._pushGeneratedProblem(monster.questions, p, 10, 3);
         }
 
         const first = problems[0];
@@ -365,7 +375,6 @@ export class MonsterManager {
         // 비동기 완료 후 선택지 검증 및 셔플
         this._prepareChoices(monster);
 
-        console.log(`✅ 보스 문제 ${problems.length}개 생성 완료!`);
       }
     } catch (err) {
       console.error('보스 문제 생성 오류:', err);
@@ -395,11 +404,7 @@ export class MonsterManager {
         }
       } else if (m.question) {
         if (!currentMonster.questions.some(existing => existing.question === m.question)) {
-          currentMonster.questions.push({
-            question: m.question, answer: m.answer,
-            choices: m.choices || [], correctIndex: m.correctIndex || 0,
-            explanation: m.explanation || ''
-          });
+          currentMonster.questions.push(this._toQuestionObj(m));
         }
       }
     }
@@ -409,7 +414,6 @@ export class MonsterManager {
   async autoGenerateQuestions(monster) {
     if (!monster.questions) monster.questions = [];
     try {
-      console.log('🤖 문제 부족! AI 자동 생성 중...');
       let problems = null;
 
       if (problemGeneratorService.hasApiKey()) {
@@ -427,22 +431,7 @@ export class MonsterManager {
 
       if (problems && problems.length > 0) {
         for (const p of problems) {
-          if (monster.questions.length < 10) {
-            const answer = p.answer || '';
-            let choices = p.choices || [];
-            let correctIndex = p.correctIndex || 0;
-            // 정답이 선택지에 없으면 강제 삽입
-            if (answer && choices.length > 0 && !choices.includes(answer)) {
-              choices[0] = answer;
-              correctIndex = 0;
-            }
-            if (!answer || !p.question) continue;
-            monster.questions.push({
-              question: p.question, answer,
-              choices, correctIndex,
-              explanation: p.explanation || ''
-            });
-          }
+          this._pushGeneratedProblem(monster.questions, p, 10);
         }
 
         const existingMonster = this.monsters.find(m => m.id === monster.id);
@@ -451,11 +440,9 @@ export class MonsterManager {
           await this.db.put('monsters', existingMonster);
         }
 
-        console.log(`✅ AI 자동 생성 완료! (총 ${monster.questions.length}개 문제)`);
       } else {
         // AI 키 없음 — 다른 몬스터 문제로 보충
         this._fillFromAllMonsters(monster, 10);
-        console.log(`📦 다른 몬스터 문제로 보충 (총 ${monster.questions.length}개)`);
       }
     } catch (err) {
       console.error('AI 자동 생성 오류:', err);
@@ -489,11 +476,7 @@ export class MonsterManager {
 
     for (const m of others) {
       if (monster.questions.length >= maxCount) break;
-      const q = {
-        question: m.question, answer: m.answer,
-        choices: m.choices || [], correctIndex: m.correctIndex || 0,
-        explanation: m.explanation || ''
-      };
+      const q = this._toQuestionObj(m);
       if (!monster.questions.some(existing => existing.question === q.question)) {
         monster.questions.push(q);
       }
@@ -511,7 +494,6 @@ export class MonsterManager {
   // 유사 문제 생성 (ProblemGeneratorService)
   async generateSimilarWithProblemGenerator(monster, currentMonster) {
     try {
-      console.log('🤖 ProblemGeneratorService 유사 문제 생성 중...');
       const originalProblem = {
         question: monster.question || '', answer: monster.answer || '',
         topic: monster.topic || t('defaultTopic'), difficulty: monster.difficulty || 2
@@ -522,39 +504,21 @@ export class MonsterManager {
         const existingMonster = this.monsters.find(m => m.id === monster.id);
         if (existingMonster) {
           if (!existingMonster.questions) {
-            existingMonster.questions = [{
-              question: existingMonster.question, answer: existingMonster.answer,
-              choices: existingMonster.choices || [], correctIndex: existingMonster.correctIndex || 0,
-              explanation: existingMonster.explanation || ''
-            }];
+            existingMonster.questions = [this._toQuestionObj(existingMonster)];
           }
           for (const p of problems) {
-            if (existingMonster.questions.length < 10 && p.question && p.answer) {
-              let choices = p.choices || [];
-              let correctIndex = p.correctIndex || 0;
-              if (choices.length > 0 && !choices.includes(p.answer)) {
-                choices[0] = p.answer;
-                correctIndex = 0;
-              }
-              existingMonster.questions.push({
-                question: p.question, answer: p.answer,
-                choices, correctIndex,
-                explanation: p.explanation || ''
-              });
-            }
+            this._pushGeneratedProblem(existingMonster.questions, p, 10);
           }
           await this.db.put('monsters', existingMonster);
 
           if (currentMonster && currentMonster.id === existingMonster.id) {
             currentMonster.questions = [...existingMonster.questions];
           }
-          console.log(`✅ ${problems.length}개 유사 문제 추가! (총 ${existingMonster.questions.length}개)`);
         }
       }
     } catch (err) {
       console.error('ProblemGeneratorService 문제 생성 오류:', err);
       if (geminiService.hasApiKey()) {
-        console.log('🔄 Gemini로 폴백...');
         this.generateSimilarMonsters(monster, currentMonster);
       }
     }
@@ -563,7 +527,6 @@ export class MonsterManager {
   // AI로 유사 문제 생성 (Gemini)
   async generateSimilarMonsters(monster, currentMonster) {
     try {
-      console.log('🤖 Gemini 유사 문제 생성 중...');
       const subjectKey = SUBJECTS[monster.subject?.toUpperCase()]?.nameKey || 'math';
       const subjectName = t(subjectKey);
       const result = await geminiService.generateSimilarProblems(
@@ -574,33 +537,16 @@ export class MonsterManager {
         const existingMonster = this.monsters.find(m => m.id === monster.id);
         if (existingMonster) {
           if (!existingMonster.questions) {
-            existingMonster.questions = [{
-              question: existingMonster.question, answer: existingMonster.answer,
-              choices: existingMonster.choices || [], correctIndex: existingMonster.correctIndex || 0,
-              explanation: existingMonster.explanation || ''
-            }];
+            existingMonster.questions = [this._toQuestionObj(existingMonster)];
           }
           for (const problem of result.problems) {
-            if (existingMonster.questions.length < 10 && problem.question && problem.answer) {
-              let choices = problem.choices || [];
-              let correctIndex = problem.correctIndex || 0;
-              if (choices.length > 0 && !choices.includes(problem.answer)) {
-                choices[0] = problem.answer;
-                correctIndex = 0;
-              }
-              existingMonster.questions.push({
-                question: problem.question, answer: problem.answer,
-                choices, correctIndex,
-                explanation: problem.explanation || ''
-              });
-            }
+            this._pushGeneratedProblem(existingMonster.questions, problem, 10);
           }
           await this.db.put('monsters', existingMonster);
 
           if (currentMonster && currentMonster.id === existingMonster.id) {
             currentMonster.questions = [...existingMonster.questions];
           }
-          console.log(`✅ ${result.problems.length}개 유사 문제 추가! (Gemini, 총 ${existingMonster.questions.length}개)`);
         }
       }
     } catch (err) {
@@ -621,7 +567,7 @@ export class MonsterManager {
         apiService.putMonster(monster.serverId, {
           status: 'cleared',
           defeated_at: new Date().toISOString()
-        }).catch(() => {});
+        }).catch(e => console.warn('몬스터 동기화 실패:', e.message));
       }
     }
   }

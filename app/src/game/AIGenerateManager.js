@@ -2,12 +2,29 @@
 import { geminiService } from '../services/GeminiService.js';
 import { imageAnalysisService } from '../services/ImageAnalysisService.js';
 import { problemGeneratorService } from '../services/ProblemGeneratorService.js';
+import { SCREENS } from '../utils/constants.js';
 import { t } from '../i18n/i18n.js';
+import { renderProblemCard } from '../utils/textCleaner.js';
 
 export class AIGenerateManager {
   constructor(game) {
     this.game = game;
     this._aiGenerating = false;
+  }
+
+  _withTimeout(promise, ms = 60000) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(t('timeout') || 'Timeout')), ms))
+    ]);
+  }
+
+  // 생성 상태 강제 초기화 (안전장치)
+  _forceCleanup() {
+    const game = this.game;
+    game.isGenerating = false;
+    game._needsRender = true;
+    game._removeCancelOverlay();
   }
 
   async promptApiKey() {
@@ -27,38 +44,66 @@ export class AIGenerateManager {
   }
 
   async testAIGeneration() {
+    if (this._aiGenerating) return;
+    this._aiGenerating = true;
     const game = this.game;
     try {
-      await game.showModal(t('testGenerating'));
-      const result = await geminiService.generateNewProblems(t('defaultTopic'), t('linearEquation'), 3);
-      if (result && result.problems && result.problems.length > 0) {
-        let addedCount = 0;
-        for (const p of result.problems) {
-          const monster = {
-            subject: 'math', question: p.question, answer: p.answer,
-            choices: p.choices || [], correctIndex: p.correctIndex || 0,
-            explanation: p.explanation || '',
-            hp: 80 + (p.difficulty || 1) * 20, maxHp: 80 + (p.difficulty || 1) * 20,
-            difficulty: p.difficulty || 1, isGenerated: true, createdAt: Date.now(), status: 'alive'
-          };
-          await game.db.add('monsters', monster);
-          addedCount++;
+      let resultMessage = null;
+      try {
+        game._generationCancelled = false;
+        game.isGenerating = true;
+        game.generatingMessage = t('testGenerating');
+        game.generatingSubMessage = '';
+        game._needsRender = true;
+
+        const result = await this._withTimeout(geminiService.generateNewProblems(t('defaultTopic'), t('linearEquation'), 3));
+
+        if (!game._generationCancelled && result && result.problems && result.problems.length > 0) {
+          let addedCount = 0;
+          for (const p of result.problems) {
+            const monster = {
+              subject: 'math', question: p.question, answer: p.answer,
+              choices: p.choices || [], correctIndex: p.correctIndex || 0,
+              explanation: p.explanation || '',
+              hp: 80 + (p.difficulty || 1) * 20, maxHp: 80 + (p.difficulty || 1) * 20,
+              difficulty: p.difficulty || 1, isGenerated: true, createdAt: Date.now(), status: 'alive'
+            };
+            monster.imageData = renderProblemCard(monster);
+            await game.db.add('monsters', monster);
+            addedCount++;
+          }
+          await game.monsterManager.loadMonsters();
+          const p = result.problems[0];
+          resultMessage = t('testGenerated', addedCount, p.question, p.answer);
+        } else if (!game._generationCancelled) {
+          resultMessage = t('generateFailed');
         }
-        await game.monsterManager.loadMonsters();
-        const p = result.problems[0];
-        await game.showModal(t('testGenerated', addedCount, p.question, p.answer));
-      } else {
-        await game.showModal(t('generateFailed'));
+      } catch (err) {
+        resultMessage = t('error') + err.message;
+      } finally {
+        // 생성 상태 해제 + 오버레이 제거 (모달 표시 전에 반드시)
+        this._forceCleanup();
       }
-    } catch (err) {
-      await game.showModal(t('error') + err.message);
+      if (resultMessage) {
+        await game.showModal(resultMessage);
+      }
+    } finally {
+      // 이중 안전장치: 어떤 경우에도 정리 보장
+      this._forceCleanup();
+      this._aiGenerating = false;
+      game.changeScreen(SCREENS.MAIN);
     }
   }
 
   async showAIGenerateMenu() {
     if (this._aiGenerating) return;
     this._aiGenerating = true;
-    try { await this._doAIGenerateMenu(); } finally { this._aiGenerating = false; }
+    try {
+      await this._doAIGenerateMenu();
+    } finally {
+      this._forceCleanup();
+      this._aiGenerating = false;
+    }
   }
 
   async _doAIGenerateMenu() {
@@ -99,13 +144,16 @@ export class AIGenerateManager {
       await game.showModal(t('invalidInput')); return;
     }
 
+    let resultMessage = null;
     try {
+      game._generationCancelled = false;
       game.isGenerating = true;
       game.generatingMessage = t('generating');
       game.generatingSubMessage = t('generatingDesc', count);
-      const problems = await problemGeneratorService.generateProblems(selectedTopic, diff, count, subject);
+      game._needsRender = true;
+      const problems = await this._withTimeout(problemGeneratorService.generateProblems(selectedTopic, diff, count, subject));
 
-      if (problems && problems.length > 0) {
+      if (!game._generationCancelled && problems && problems.length > 0) {
         let addedCount = 0;
         for (const p of problems) {
           const monster = {
@@ -116,18 +164,26 @@ export class AIGenerateManager {
             hp: 80 + (p.difficulty || diff) * 20, maxHp: 80 + (p.difficulty || diff) * 20,
             difficulty: p.difficulty || diff, isGenerated: true, createdAt: Date.now(), status: 'alive'
           };
+          monster.imageData = renderProblemCard(monster);
           await game.db.add('monsters', monster);
           addedCount++;
         }
         await game.monsterManager.loadMonsters();
         const example = problems[0];
-        await game.showModal(t('generated', addedCount, topics[selectedTopic].name, diffName, example.question, example.answer));
-      } else { await game.showModal(t('generateFailed')); }
+        resultMessage = t('generated', addedCount, topics[selectedTopic].name, diffName, example.question, example.answer);
+      } else if (!game._generationCancelled) {
+        resultMessage = t('generateFailed');
+      }
     } catch (err) {
       console.error('AI 문제 생성 오류:', err);
-      await game.showModal(t('error') + err.message);
+      resultMessage = t('error') + err.message;
     } finally {
-      game.isGenerating = false;
+      // 생성 상태 해제 + 오버레이 제거 (모달 표시 전에 반드시)
+      this._forceCleanup();
     }
+    if (resultMessage) {
+      await game.showModal(resultMessage);
+    }
+    game.changeScreen(SCREENS.MAIN);
   }
 }

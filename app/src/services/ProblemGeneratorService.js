@@ -1,6 +1,7 @@
 // AI 문제 생성 서비스 (수학 전용)
 // SmilePrint API 사용
 import { secureGetItem } from '../utils/storage.js';
+import { cleanQuestionText } from '../utils/textCleaner.js';
 
 const API_BASE_URL = 'https://caricature-api-rust.wizice.com';
 const DEFAULT_MODEL = 'gemini-2.0-flash';
@@ -99,7 +100,8 @@ ${answerRule}
 
 ## 필수
 - choices[0]은 반드시 정답
-- explanation은 단계별 풀이`;
+- explanation은 단계별 풀이
+- question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)`;
   }
 
   // 과학 문제 생성 Prompt
@@ -138,7 +140,8 @@ ${topicInfo.name} (${topicInfo.level}등학교) 문제를 ${count}개 만드세�
 
 ## 필수
 - choices[0]은 반드시 정답
-- explanation은 과학적 원리를 포함한 상세 풀이`;
+- explanation은 과학적 원리를 포함한 상세 풀이
+- question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)`;
   }
 
   // 유사 문제 생성 Prompt
@@ -167,6 +170,7 @@ ${topicInfo.name} (${topicInfo.level}등학교) 문제를 ${count}개 만드세�
 - 같은 유형, 다른 숫자
 ${answerRule}
 - 단계별 풀이 포함
+- question에는 순수 문제 텍스트만 (영어 번역, 번호, 메타정보, 마크다운 서식 제외)
 
 ## JSON 출력
 {
@@ -293,7 +297,15 @@ ${answerRule}
   parseJSON(text) {
     try {
       const match = text.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (parsed.problems) {
+          parsed.problems.forEach(p => {
+            if (p.question) p.question = cleanQuestionText(p.question);
+          });
+        }
+        return parsed;
+      }
       return null;
     } catch (e) {
       console.error('JSON 파싱 오류:', e);

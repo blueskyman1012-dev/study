@@ -2,6 +2,7 @@
 import { Renderer } from '../../canvas/Renderer.js';
 import { GAME_CONFIG, COLORS } from '../../utils/constants.js';
 import { t } from '../../i18n/i18n.js';
+import { cleanQuestionText } from '../../utils/textCleaner.js';
 
 export function renderBattleScreen(game) {
   const player = game.playerManager.player;
@@ -102,7 +103,7 @@ export function renderBattleScreen(game) {
   Renderer.roundRect(160, qCardY - 12, 80, 24, 12, COLORS.ACCENT);
   Renderer.drawText('QUESTION', 200, qCardY - 7, { font: 'bold 11px system-ui', align: 'center' });
 
-  const questionText = monster.question || t('loadingQuestion');
+  const questionText = cleanQuestionText(monster.question) || t('loadingQuestion');
   const maxCharsPerLine = 22;
   const maxLines = 6;
   const lineHeight = 18;
@@ -125,8 +126,10 @@ export function renderBattleScreen(game) {
     Renderer.drawText(line, 200, startY + i * lineHeight, { font: `bold ${fontSize}px system-ui`, align: 'center' });
   });
 
-  // 항상 크게 보기 아이콘 표시 + 문제 카드 전체 클릭 가능
-  Renderer.drawText('🔍', 365, qCardY + 8, { font: '12px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
+  // 이미지 문제 표시 + 크게 보기 아이콘
+  const hasImage = !!monster.imageData;
+  const viewIcon = hasImage ? '📷' : '🔍';
+  Renderer.drawText(viewIcon, 365, qCardY + 8, { font: '12px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
   game.registerClickArea('viewQuestion', 20, qCardY, 360, qCardH, () => game.battleManager.showFullQuestion());
 
   // 선택지
@@ -148,7 +151,8 @@ export function renderBattleScreen(game) {
     Renderer.roundRect(x, y, choiceWidth, choiceHeight, 12, null, 'rgba(99,102,241,0.3)');
     Renderer.drawText(`${i + 1}.`, x + 15, y + choiceHeight / 2 - 5, { font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT });
 
-    const choiceText = String(choice).length > 12 ? String(choice).substring(0, 12) + '...' : String(choice);
+    const choiceStr = String(choice);
+    const choiceText = choiceStr.length > 12 ? choiceStr.substring(0, 12) + '...' : choiceStr;
     Renderer.drawText(choiceText, x + 35, y + choiceHeight / 2 - 5, { font: 'bold 16px system-ui', color: COLORS.TEXT_PRIMARY });
 
     game.registerClickArea(`choice_${i}`, x, y, choiceWidth, choiceHeight, () => game.battleManager.selectAnswer(i));

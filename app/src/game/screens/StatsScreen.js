@@ -340,7 +340,12 @@ function renderSubjectTab(game, stats, ctx, startY) {
   allTopicList.sort((a, b) => b.wrongRate - a.wrongRate || b.wrong - a.wrong);
   const topItems = allTopicList.slice(0, 5);
 
-  if (topItems.length > 0) {
+  if (topItems.length === 0) {
+    Renderer.drawText(t('stats_noWrongTopics'), 200, y + 10, {
+      font: '12px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+    });
+    y += 36;
+  } else {
     const topCardH = 44 + topItems.length * 30;
     Renderer.drawGradientCard(20, y, 360, topCardH, 14, '#1a1a28', '#151520');
     Renderer.roundRect(20, y, 360, topCardH, 14, null, 'rgba(239,68,68,0.25)');
@@ -553,21 +558,21 @@ function renderAnalysisTab(game, stats, ctx, startY) {
     Renderer.drawGradientCard(20, y, 360, runListH, 14, '#1a1a28', '#151520');
     Renderer.roundRect(20, y, 360, runListH, 14, null, 'rgba(99,102,241,0.15)');
 
-    // 컬럼 헤더
+    // 컬럼 헤더 (데이터 행과 x좌표 일치)
     const hdrY = y + 14;
-    Renderer.drawText(t('stats_colDate') || '날짜', 60, hdrY, {
+    Renderer.drawText(t('stats_colDate'), 40, hdrY, {
+      font: '9px system-ui', color: COLORS.TEXT_SECONDARY
+    });
+    Renderer.drawText(t('stats_colCorrectRate'), 180, hdrY, {
       font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
     });
-    Renderer.drawText(t('stats_colCorrectRate') || '정답률', 180, hdrY, {
+    Renderer.drawText(t('stats_colCombo'), 240, hdrY, {
       font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
     });
-    Renderer.drawText(t('stats_colCombo') || '콤보', 240, hdrY, {
+    Renderer.drawText(t('stats_colGold'), 300, hdrY, {
       font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
     });
-    Renderer.drawText(t('stats_colGold') || '골드', 300, hdrY, {
-      font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
-    });
-    Renderer.drawText(t('stats_colTime') || '시간', 360, hdrY, {
+    Renderer.drawText(t('stats_colTime'), 365, hdrY, {
       font: '9px system-ui', color: COLORS.TEXT_SECONDARY, align: 'right'
     });
 

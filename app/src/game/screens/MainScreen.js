@@ -66,11 +66,15 @@ export function renderMainScreen(game) {
   const totalDmg = game.playerManager.getTotalDamage();
   const inv = player.inventory || {};
 
-  Renderer.roundRect(20, 250, 360, 42, 12, COLORS.BG_CARD);
+  Renderer.roundRect(20, 250, 175, 42, 12, COLORS.BG_CARD);
   Renderer.drawText(`⚔️${totalDmg}`, 65, 267, { font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center', stroke: true });
-  Renderer.drawText(`👾${game.monsterManager.monsters.length}`, 155, 267, { font: 'bold 14px system-ui', color: COLORS.TEXT_PRIMARY, align: 'center', stroke: true });
-  Renderer.drawText(`🪶${inv.reviveTicket || 0}`, 245, 267, { font: 'bold 14px system-ui', color: COLORS.WARNING, align: 'center', stroke: true });
-  Renderer.drawText(`💡${inv.hintTicket || 0}`, 335, 267, { font: 'bold 14px system-ui', color: COLORS.WARNING, align: 'center', stroke: true });
+  Renderer.drawText(`🪶${inv.reviveTicket || 0}`, 155, 267, { font: 'bold 14px system-ui', color: COLORS.WARNING, align: 'center', stroke: true });
+
+  // 문제 보기 버튼 (독립 버튼)
+  Renderer.drawButton(205, 250, 175, 42, `📋 ${t('problemViewer')}`, {
+    bgColor: COLORS.BG_CARD, borderColor: 'rgba(99,102,241,0.4)', fontSize: 13, stroke: true
+  });
+  game.registerClickArea('problemViewer', 205, 250, 175, 42, () => game.showProblemViewer());
 
   // === 던전 입장 ===
   Renderer.drawButton(20, 310, 360, 65, t('enterDungeon'), { bgColor: COLORS.ACCENT, fontSize: 22, stroke: true });

@@ -1,7 +1,8 @@
-// 다이얼로그/모달 관리 (showModal, showConfirm, showPrompt, showLevelProgress 등)
+// 다이얼로그/모달 관리 (showModal, showConfirm, showPrompt, showLevelProgress, showProblemViewer 등)
 import { Renderer } from '../canvas/Renderer.js';
 import { GAME_CONFIG, LEVEL_CONFIG, COLORS, UPGRADES } from '../utils/constants.js';
 import { t } from '../i18n/i18n.js';
+import { cleanQuestionText, renderProblemCard } from '../utils/textCleaner.js';
 
 function escapeHtml(str) {
   if (typeof str !== 'string') return String(str ?? '');
@@ -16,6 +17,11 @@ function escapeHtml(str) {
 export class DialogManager {
   constructor(game) {
     this.game = game;
+    this._lastDismissTime = 0;
+  }
+
+  _onDismiss() {
+    this._lastDismissTime = Date.now();
   }
 
   showAnalyzingScreen(apiName = 'AI') {
@@ -48,8 +54,8 @@ export class DialogManager {
       `;
 
       document.body.appendChild(modal);
-      document.getElementById('modal-ok-btn').onclick = () => { modal.remove(); resolve(); };
-      modal.onclick = (e) => { if (e.target === modal) { modal.remove(); resolve(); } };
+      document.getElementById('modal-ok-btn').onclick = () => { modal.remove(); this._onDismiss(); resolve(); };
+      modal.onclick = (e) => { if (e.target === modal) { modal.remove(); this._onDismiss(); resolve(); } };
     });
   }
 
@@ -73,9 +79,9 @@ export class DialogManager {
       `;
 
       document.body.appendChild(modal);
-      document.getElementById('modal-ok-btn').onclick = () => { modal.remove(); resolve(true); };
-      document.getElementById('modal-cancel-btn').onclick = () => { modal.remove(); resolve(false); };
-      modal.onclick = (e) => { if (e.target === modal) { modal.remove(); resolve(false); } };
+      document.getElementById('modal-ok-btn').onclick = () => { modal.remove(); this._onDismiss(); resolve(true); };
+      document.getElementById('modal-cancel-btn').onclick = () => { modal.remove(); this._onDismiss(); resolve(false); };
+      modal.onclick = (e) => { if (e.target === modal) { modal.remove(); this._onDismiss(); resolve(false); } };
     });
   }
 
@@ -125,6 +131,7 @@ export class DialogManager {
           window.visualViewport.removeEventListener('resize', adjustForKeyboard);
         }
         modal.remove();
+        this._onDismiss();
         resolve(value);
       };
 
@@ -229,5 +236,101 @@ export class DialogManager {
     document.body.appendChild(modal);
     document.getElementById('close-level-modal').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  }
+
+  // 등록된 문제 보기
+  async showProblemViewer() {
+    const db = this.game.db;
+    const alive = await db.getByIndex('monsters', 'status', 'alive');
+    const cleared = await db.getByIndex('monsters', 'status', 'cleared');
+    const allMonsters = [...alive, ...cleared].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    const existing = document.getElementById('problem-viewer-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'problem-viewer-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10000;display:flex;flex-direction:column;align-items:center;font-family:system-ui,-apple-system,sans-serif;';
+
+    const renderCards = (filter) => {
+      let list = allMonsters;
+      if (filter === 'image') list = allMonsters.filter(m => m.imageData);
+
+      if (list.length === 0) {
+        return `<div style="text-align:center;color:#94a3b8;padding:40px 0;font-size:15px;">${escapeHtml(t('problemViewerEmpty'))}</div>`;
+      }
+
+      return list.map((m) => {
+        // 원본 이미지가 있으면 원본 표시, 없으면 Canvas로 카드 이미지 생성
+        const imgSrc = m.imageData || renderProblemCard(m);
+
+        return `<div style="margin-bottom:12px;" data-monster-id="${m.id}">
+          <img src="${imgSrc}" style="width:100%;border-radius:10px;cursor:pointer;display:block;" onclick="this.classList.toggle('pv-expanded');this.style.maxHeight=this.classList.contains('pv-expanded')?'none':'300px'" />
+          <div style="margin-top:6px;padding:8px 12px;background:rgba(30,30,60,0.8);border-radius:8px;font-size:13px;color:#94a3b8;">${escapeHtml(t('answerLabel'))}: <span style="color:#22c55e;font-weight:bold;">${escapeHtml(m.answer || '?')}</span></div>
+        </div>`;
+      }).join('');
+    };
+
+    const imageCount = allMonsters.filter(m => m.imageData).length;
+
+    modal.innerHTML = `
+      <div style="width:100%;max-width:400px;height:100%;display:flex;flex-direction:column;">
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:16px 20px 12px;border-bottom:1px solid rgba(99,102,241,0.3);flex-shrink:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:18px;font-weight:bold;color:#e2e8f0;">${escapeHtml(t('problemViewer'))} <span style="font-size:14px;color:#818cf8;">(${allMonsters.length})</span></span>
+            <button id="pv-close" style="background:none;border:none;color:#94a3b8;font-size:24px;cursor:pointer;padding:0 4px;">✕</button>
+          </div>
+          <div style="display:flex;gap:8px;" id="pv-filters">
+            <button class="pv-filter-btn active" data-filter="all" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.3);color:#e2e8f0;font-size:13px;cursor:pointer;">${escapeHtml(t('filterAll'))} (${allMonsters.length})</button>
+            <button class="pv-filter-btn" data-filter="image" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(99,102,241,0.2);background:transparent;color:#94a3b8;font-size:13px;cursor:pointer;">${escapeHtml(t('filterImage'))} (${imageCount})</button>
+          </div>
+        </div>
+        <div id="pv-list" style="flex:1;overflow-y:auto;padding:12px 16px;-webkit-overflow-scrolling:touch;">
+          ${renderCards('all')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 필터 버튼
+    modal.querySelectorAll('.pv-filter-btn').forEach(btn => {
+      btn.onclick = () => {
+        modal.querySelectorAll('.pv-filter-btn').forEach(b => {
+          b.style.background = 'transparent';
+          b.style.color = '#94a3b8';
+          b.style.borderColor = 'rgba(99,102,241,0.2)';
+          b.classList.remove('active');
+        });
+        btn.style.background = 'rgba(99,102,241,0.3)';
+        btn.style.color = '#e2e8f0';
+        btn.style.borderColor = 'rgba(99,102,241,0.4)';
+        btn.classList.add('active');
+        document.getElementById('pv-list').innerHTML = renderCards(btn.dataset.filter);
+      };
+    });
+
+    document.getElementById('pv-close').onclick = () => { modal.remove(); this._onDismiss(); };
+    modal.onclick = (e) => { if (e.target === modal) { modal.remove(); this._onDismiss(); } };
+
+    // 이미지 없는 문제에 대해 Canvas 카드 이미지 자동 생성 후 DB 저장
+    const noImageMonsters = allMonsters.filter(m => !m.imageData);
+    if (noImageMonsters.length > 0) {
+      this._generateImagesInBackground(noImageMonsters, db);
+    }
+  }
+
+  // 이미지 없는 문제들에 대해 Canvas 카드 이미지 생성 후 DB 저장
+  async _generateImagesInBackground(monsters, db) {
+    for (const m of monsters) {
+      if (!document.getElementById('problem-viewer-modal')) return;
+      try {
+        const imgData = renderProblemCard(m);
+        if (imgData) {
+          m.imageData = imgData;
+          await db.put('monsters', m);
+        }
+      } catch { /* 실패 무시 */ }
+    }
   }
 }

@@ -7,6 +7,7 @@ import { safeGetItem } from '../utils/storage.js';
 import { SoundService } from '../services/SoundService.js';
 import { apiService } from '../services/ApiService.js';
 import { t } from '../i18n/i18n.js';
+import { renderProblemCard } from '../utils/textCleaner.js';
 
 import { EffectSystem } from './EffectSystem.js';
 import { PlayerManager } from './PlayerManager.js';
@@ -66,6 +67,9 @@ export class Game {
 
     // 로딩/생성 상태
     this.isGenerating = false;
+    this._generationCancelled = false;
+    this._cancelOverlay = null;
+    this._generatingStartTime = 0;
     this.generatingMessage = '';
     this.generatingSubMessage = '';
 
@@ -85,7 +89,6 @@ export class Game {
     geminiService.loadApiKey();
     this.achievementManager.initDailyMissions();
     this.effects.setCosmetics(this.playerManager.player.cosmetics);
-    console.log('🎮 Game initialized');
 
     // 신규 유저 가이드 자동 표시
     const player = this.playerManager.player;
@@ -137,6 +140,36 @@ export class Game {
     }
   }
 
+  // 생성 취소 DOM 오버레이 (버튼만 클릭 가능, 배경은 터치 통과)
+  _showCancelOverlay() {
+    if (this._cancelOverlay) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'generation-cancel-overlay';
+    overlay.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;z-index:9999;display:flex;justify-content:center;padding:20px 0 40px;pointer-events:none;';
+    const btn = document.createElement('button');
+    btn.textContent = t('cancel') || '취소';
+    btn.style.cssText = 'padding:16px 64px;border:none;border-radius:12px;background:#dc2626;color:white;font-size:18px;font-weight:bold;cursor:pointer;font-family:system-ui,-apple-system,sans-serif;pointer-events:auto;';
+    overlay.appendChild(btn);
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      this._generationCancelled = true;
+      this.isGenerating = false;
+      this._needsRender = true;
+      this._removeCancelOverlay();
+      this.changeScreen(SCREENS.MAIN);
+    };
+    document.body.appendChild(overlay);
+    this._cancelOverlay = overlay;
+  }
+
+  _removeCancelOverlay() {
+    if (this._cancelOverlay) {
+      this._cancelOverlay.remove();
+      this._cancelOverlay = null;
+    }
+    this._generatingStartTime = 0;
+  }
+
   // 입력 관리 (위임)
   get clickAreas() { return this.inputManager.clickAreas; }
   set clickAreas(v) { this.inputManager.clickAreas = v; }
@@ -162,16 +195,25 @@ export class Game {
     const escPressed = this._keys['Escape'] || this._keys[27];
     if (escPressed && !this._escHandled) {
       this._escHandled = true;
+      // 생성 중이면 취소
+      if (this.isGenerating) {
+        this._generationCancelled = true;
+        this.isGenerating = false;
+        this._removeCancelOverlay();
+        this.changeScreen(SCREENS.MAIN);
+      }
       // 모달 먼저 닫기
-      const levelModal = document.getElementById('level-modal');
-      if (levelModal) { levelModal.remove(); }
       else {
-        const customModal = document.getElementById('custom-modal');
-        if (customModal) { customModal.click(); }
-        else if (this.currentScreen !== SCREENS.MAIN &&
-                 this.currentScreen !== SCREENS.BATTLE &&
-                 this.currentScreen !== SCREENS.RESULT) {
-          this.changeScreen(SCREENS.MAIN);
+        const levelModal = document.getElementById('level-modal');
+        if (levelModal) { levelModal.remove(); }
+        else {
+          const customModal = document.getElementById('custom-modal');
+          if (customModal) { customModal.click(); }
+          else if (this.currentScreen !== SCREENS.MAIN &&
+                   this.currentScreen !== SCREENS.BATTLE &&
+                   this.currentScreen !== SCREENS.RESULT) {
+            this.changeScreen(SCREENS.MAIN);
+          }
         }
       }
       this._needsRender = true;
@@ -185,8 +227,22 @@ export class Game {
       this.battleManager.updateBattle();
       this._needsRender = true;
     } else if (this.isGenerating) {
+      // DOM 취소 오버레이 표시
+      this._showCancelOverlay();
+      // 65초 안전 타임아웃 (API 60초 타임아웃 + 여유 5초)
+      if (!this._generatingStartTime) {
+        this._generatingStartTime = Date.now();
+      } else if (Date.now() - this._generatingStartTime > 65000) {
+        this._generationCancelled = true;
+        this.isGenerating = false;
+        this._removeCancelOverlay();
+        this.changeScreen(SCREENS.MAIN);
+      }
       this._needsRender = true;
-    } else if (hadEffects || this.effects.hasActiveEffects()) {
+    } else {
+      this._removeCancelOverlay();
+    }
+    if (hadEffects || this.effects.hasActiveEffects()) {
       this._needsRender = true;
     }
   }
@@ -220,6 +276,18 @@ export class Game {
       });
       Renderer.drawText(t('pleaseWait'), 200, 400, {
         font: '14px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center'
+      });
+      // 취소 안내 (DOM 오버레이 버튼이 주 취소 수단, 캔버스에도 표시)
+      Renderer.drawText(t('cancel') || '취소', 200, 470, {
+        font: 'bold 16px system-ui', color: '#f87171', align: 'center'
+      });
+      // 캔버스 터치 취소도 유지 (백업)
+      this.registerClickArea('cancelGeneration', 0, 0, 400, 700, () => {
+        this._generationCancelled = true;
+        this.isGenerating = false;
+        this._needsRender = true;
+        this._removeCancelOverlay();
+        this.changeScreen(SCREENS.MAIN);
       });
       this.effects.render();
       ctx.restore();
@@ -387,7 +455,7 @@ export class Game {
     await this.db.add('runs', this.currentRun);
     this.statsManager.invalidateCache();
     if (apiService.isLoggedIn()) {
-      apiService.postRun(this.currentRun).catch(() => {});
+      apiService.postRun(this.currentRun).catch(e => console.warn('런 저장 실패:', e.message));
     }
 
     this.achievementManager.onRunEnd(this.currentRun);
@@ -431,6 +499,7 @@ export class Game {
   showAIGenerateMenu() { return this.aiGenerateManager.showAIGenerateMenu(); }
 
   showLevelProgress() { return this.dialogManager.showLevelProgress(); }
+  showProblemViewer() { return this.dialogManager.showProblemViewer(); }
 
   // 데이터 관리 (위임)
   resetAllProblems() { return this.dataManager.resetAllProblems(); }
@@ -452,24 +521,26 @@ export class Game {
     let remaining = needed;
     let totalAdded = 0;
 
+    this._generationCancelled = false;
     this.isGenerating = true;
     this.generatingMessage = t('autoFillGenerating') || '문제 자동 생성 중...';
     this.generatingSubMessage = t('autoFillDesc', remaining) || `${remaining}개 문제를 만들고 있습니다`;
     this._needsRender = true;
 
     try {
-      while (remaining > 0) {
+      while (remaining > 0 && !this._generationCancelled) {
         const batchSize = Math.min(remaining, 5);
         const randomTopic = topicKeys[Math.floor(Math.random() * topicKeys.length)];
         const difficulty = Math.random() < 0.5 ? 1 : 2;
 
         try {
           let problems = null;
+          const withTimeout = (p) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))]);
           if (problemGeneratorService.hasApiKey()) {
-            problems = await problemGeneratorService.generateProblems(randomTopic, difficulty, batchSize, subject);
+            problems = await withTimeout(problemGeneratorService.generateProblems(randomTopic, difficulty, batchSize, subject));
           } else if (geminiService.hasApiKey()) {
             const topicName = topics[randomTopic].name;
-            const result = await geminiService.generateNewProblems(subject, topicName, batchSize);
+            const result = await withTimeout(geminiService.generateNewProblems(subject, topicName, batchSize));
             problems = result?.problems;
           }
 
@@ -492,6 +563,8 @@ export class Game {
                 createdAt: Date.now(),
                 status: 'alive'
               };
+              // Canvas로 문제 카드 이미지 즉시 생성
+              monster.imageData = renderProblemCard(monster);
               await this.db.add('monsters', monster);
               totalAdded++;
             }
@@ -508,12 +581,10 @@ export class Game {
         this._needsRender = true;
       }
 
-      if (totalAdded > 0) {
-        console.log(`✅ 자동 채우기 완료: ${totalAdded}개 문제 생성`);
-      }
     } finally {
       this.isGenerating = false;
       this._needsRender = true;
+      this._removeCancelOverlay();
     }
   }
 
