@@ -104,18 +104,23 @@ html, body {
   box-shadow: 0 1px 6px rgba(59, 130, 246, 0.3);
 }
 
-/* 전투 중 이미지로 보기 버튼 */
+/* 전투 중 이미지로 보기 버튼 - 화면 하단 고정 */
 #battle-image-btn {
-  position: absolute;
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   display: none;
+  width: 220px;
+  height: 44px;
   background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
   border: 2px solid #60a5fa;
-  border-radius: 12px;
+  border-radius: 22px;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  z-index: 100;
+  z-index: 200;
   text-align: center;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -123,7 +128,7 @@ html, body {
   align-items: center;
   justify-content: center;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.6);
 }
 
 #battle-image-btn.visible {
@@ -132,7 +137,7 @@ html, body {
 
 #battle-image-btn:active {
   background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-  transform: scale(0.97);
+  transform: translateX(-50%) scale(0.95);
 }
 
 /* 카메라 모달 */

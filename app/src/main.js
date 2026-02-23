@@ -655,20 +655,10 @@ class App {
       }
     }
 
-    // 전투 중 이미지로 보기 버튼
+    // 전투 중 이미지로 보기 버튼 (fixed 위치, 클래스만 토글)
     if (this.battleImageBtn) {
-      const isBattle = this.game.currentScreen === SCREENS.BATTLE;
-      if (isBattle) {
+      if (this.game.currentScreen === SCREENS.BATTLE) {
         this.battleImageBtn.classList.add('visible');
-        if (this._cachedRect) {
-          const s = this._cachedScale;
-          const r = this._cachedRect;
-          this.battleImageBtn.style.left = `${r.left + 20 * s}px`;
-          this.battleImageBtn.style.top = `${r.top + 388 * s}px`;
-          this.battleImageBtn.style.width = `${360 * s}px`;
-          this.battleImageBtn.style.height = `${34 * s}px`;
-          this.battleImageBtn.style.fontSize = `${15 * s}px`;
-        }
       } else {
         this.battleImageBtn.classList.remove('visible');
       }
