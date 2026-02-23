@@ -75,15 +75,7 @@ export function renderMainScreen(game) {
 
   // ── y=390~460: HTML 오답등록 버튼 ──
 
-  // === 문제 보기 버튼 ===
-  Renderer.drawButton(20, 470, 360, 50, '📋 문제 보기', {
-    bgColor: '#1e3a5f', borderColor: '#38bdf8', fontSize: 17, stroke: true
-  });
-  game.registerClickArea('problemViewer', 20, 470, 360, 50, () => {
-    game.showProblemViewer().catch(err => {
-      game.showModal('오류: ' + err.message);
-    });
-  });
+  // ── y=470~520: HTML 문제 보기 버튼 ──
 
   // === 통계 & 상점 & 설정 & 업적 ===
   const menuBtnW = 85;

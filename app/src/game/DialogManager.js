@@ -25,13 +25,13 @@ export class DialogManager {
   }
 
   showAnalyzingScreen(apiName = 'AI') {
-    Renderer.clear(); Renderer.drawGrid();
+    Renderer.clear();
     Renderer.drawText(t('analyzing', apiName), 200, 300, { font: 'bold 24px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
     Renderer.drawText(t('analyzingDesc'), 200, 350, { font: '16px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center' });
   }
 
   showGeneratingScreen(count) {
-    Renderer.clear(); Renderer.drawGrid();
+    Renderer.clear();
     Renderer.drawText(t('generating'), 200, 280, { font: 'bold 24px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
     Renderer.drawText(t('generatingDesc', count), 200, 330, { font: '16px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center' });
     Renderer.drawText(t('pleaseWait'), 200, 370, { font: '14px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center' });

@@ -102,8 +102,6 @@ export function renderStatsFixedHeader(game) {
 export function renderStatsScreen(game) {
   const stats = game.cachedStats || {};
   const ctx = Renderer.ctx;
-  Renderer.drawGrid();
-
   // 뒤로가기 클릭 (스크롤 보정용)
   game.registerClickArea('back', 10, 10, 80, 40, () => game.changeScreen(SCREENS.MAIN));
 

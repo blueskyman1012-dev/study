@@ -19,6 +19,7 @@ class App {
     this.db = null;
     this.game = null;
     this.registerBtn = null;
+    this.problemViewerBtn = null;
     this.cameraInput = null;
     this.cameraModal = null;
     this.cameraVideo = null;
@@ -187,8 +188,10 @@ class App {
 
     // iOS 호환 버튼 초기화
     this.registerBtn = document.getElementById('register-btn');
+    this.problemViewerBtn = document.getElementById('problem-viewer-btn');
     this.cameraInput = document.getElementById('camera-input');
     this.setupCameraInput();
+    this.setupProblemViewerBtn();
 
     // 렌더러 초기화
     Renderer.init(this.ctx, GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT);
@@ -349,6 +352,18 @@ class App {
       this.mediaStream = null;
     }
     this.cameraModal.style.display = 'none';
+  }
+
+  // 문제 보기 버튼 설정
+  setupProblemViewerBtn() {
+    if (!this.problemViewerBtn) return;
+    this.problemViewerBtn.addEventListener('click', () => {
+      if (this.game) {
+        this.game.showProblemViewer().catch(err => {
+          this.game.showModal('오류: ' + err.message);
+        });
+      }
+    });
   }
 
   setupCanvas() {
@@ -610,6 +625,26 @@ class App {
         }
       } else {
         this.registerBtn.classList.remove('visible');
+      }
+    }
+
+    // 메인 화면에서만 문제 보기 버튼 표시
+    if (this.problemViewerBtn) {
+      const isMain = this.game.currentScreen === SCREENS.MAIN && this.game.guideStep === null && !this.game.isGenerating;
+      if (isMain) {
+        this.problemViewerBtn.classList.add('visible');
+        this.problemViewerBtn.style.opacity = Renderer.getUiOpacity();
+        if (this._cachedRect) {
+          const s = this._cachedScale;
+          const r = this._cachedRect;
+          this.problemViewerBtn.style.left = `${r.left + 20 * s}px`;
+          this.problemViewerBtn.style.top = `${r.top + 470 * s}px`;
+          this.problemViewerBtn.style.width = `${360 * s}px`;
+          this.problemViewerBtn.style.height = `${50 * s}px`;
+          this.problemViewerBtn.style.fontSize = `${17 * s}px`;
+        }
+      } else {
+        this.problemViewerBtn.classList.remove('visible');
       }
     }
 

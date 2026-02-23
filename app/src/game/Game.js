@@ -263,7 +263,6 @@ export class Game {
 
     // 생성/분석 중이면 로딩 화면만 표시
     if (this.isGenerating) {
-      Renderer.drawGrid();
       const pulse = 0.6 + Math.sin(Date.now() / 300) * 0.4;
       ctx.globalAlpha = pulse;
       Renderer.drawText('⏳', 200, 260, { font: '48px system-ui', align: 'center' });
@@ -448,17 +447,22 @@ export class Game {
     this.currentRun.result = isWin ? 'clear' : 'failed';
     this.currentRun.endTime = Date.now();
 
+    // 한 문제도 풀지 않고 포기한 경우 통계에 기록하지 않음
+    const skippedRun = !isWin && (this.currentRun.totalAnswers || 0) === 0;
+
     if (isWin) { SoundService.playClear(); } else { SoundService.playGameOver(); }
 
     this.playerManager.resetHp();
     await this.playerManager.save();
-    await this.db.add('runs', this.currentRun);
-    this.statsManager.invalidateCache();
-    if (apiService.isLoggedIn()) {
-      apiService.postRun(this.currentRun).catch(e => console.warn('런 저장 실패:', e.message));
-    }
 
-    this.achievementManager.onRunEnd(this.currentRun);
+    if (!skippedRun) {
+      await this.db.add('runs', this.currentRun);
+      this.statsManager.invalidateCache();
+      if (apiService.isLoggedIn()) {
+        apiService.postRun(this.currentRun).catch(e => console.warn('런 저장 실패:', e.message));
+      }
+      this.achievementManager.onRunEnd(this.currentRun);
+    }
 
     // 승패 무관하게 cleared 몬스터 부활 (풀 고갈 방지)
     await this._reviveClearedMonsters();
