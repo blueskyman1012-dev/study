@@ -90,8 +90,6 @@ export class Game {
     this.achievementManager.initDailyMissions();
     this.effects.setCosmetics(this.playerManager.player.cosmetics);
 
-    // 전투 이미지 보기 버튼 생성
-    this._createBattleImageBtn();
 
     // 신규 유저 가이드 자동 표시
     const player = this.playerManager.player;
@@ -123,10 +121,6 @@ export class Game {
       }
     }
 
-    // 전투 화면에서만 이미지 보기 버튼 표시
-    if (this._battleImageBtn) {
-      this._battleImageBtn.style.display = (screen === SCREENS.BATTLE) ? 'flex' : 'none';
-    }
 
     if (screen === SCREENS.MAIN && this.playerManager.player) {
       this.playerManager.resetHp();
@@ -606,17 +600,4 @@ export class Game {
     await this.playerManager.save();
   }
 
-  // 전투 이미지 보기 버튼 (JS 동적 생성)
-  _createBattleImageBtn() {
-    const btn = document.createElement('button');
-    btn.textContent = '📷 이미지로 보기';
-    btn.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:240px;height:48px;background:linear-gradient(135deg,#1e40af,#2563eb);border:3px solid #60a5fa;border-radius:24px;color:#fff;font-size:17px;font-weight:bold;z-index:9999;display:none;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 20px rgba(37,99,235,0.7);font-family:system-ui,sans-serif;-webkit-tap-highlight-color:transparent;';
-    btn.addEventListener('click', () => {
-      if (this.battleManager) {
-        this.battleManager.showFullQuestion();
-      }
-    });
-    document.body.appendChild(btn);
-    this._battleImageBtn = btn;
-  }
 }

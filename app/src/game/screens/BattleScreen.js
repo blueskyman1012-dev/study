@@ -126,7 +126,12 @@ export function renderBattleScreen(game) {
     Renderer.drawText(line, 200, startY + i * lineHeight, { font: `bold ${fontSize}px system-ui`, align: 'center' });
   });
 
-  // ── y=388~424: HTML 이미지로 보기 버튼 ──
+  // 문제 카드 하단: "📷 터치하면 이미지로 보기" 안내
+  Renderer.drawText('📷 터치하면 이미지로 보기', 200, qCardY + qCardH - 10, {
+    font: 'bold 12px system-ui', color: '#60a5fa', align: 'center'
+  });
+  // 문제 카드 전체를 클릭 영역으로 등록
+  game.registerClickArea('viewQuestion', 20, qCardY, 360, qCardH, () => game.battleManager.showFullQuestion());
 
   // 선택지
   const choices = monster.choices || ['①', '②', '③', '④'];
