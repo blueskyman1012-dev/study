@@ -403,4 +403,34 @@ describe('AIGenerateManager - 중복 알림 버그 수정', () => {
       expect(mgr._aiGenerating).toBe(false);
     });
   });
+
+  // ──────────────────────────────────────────
+  // changeScreen 에러 시 락 해제 테스트
+  // ──────────────────────────────────────────
+  describe('changeScreen 에러 시 안전 복구', () => {
+
+    it('changeScreen이 에러를 던져도 _aiGenerating이 false여야 한다', async () => {
+      mockGame.showPrompt.mockResolvedValueOnce(null); // 취소
+      mockGame.changeScreen.mockImplementation(() => { throw new Error('SoundService 에러'); });
+
+      await mgr.showAIGenerateMenu();
+
+      expect(mgr._aiGenerating).toBe(false);
+      expect(mockGame.isGenerating).toBe(false);
+      expect(mockGame._needsRender).toBe(true);
+    });
+
+    it('testAIGeneration에서 changeScreen 에러 시에도 락이 해제되어야 한다', async () => {
+      geminiService.generateNewProblems.mockResolvedValue({
+        problems: [{ question: 'Q', answer: 'A', difficulty: 1 }]
+      });
+      mockGame.changeScreen.mockImplementation(() => { throw new Error('SoundService 에러'); });
+
+      await mgr.testAIGeneration();
+
+      expect(mgr._aiGenerating).toBe(false);
+      expect(mockGame.isGenerating).toBe(false);
+      expect(mockGame._needsRender).toBe(true);
+    });
+  });
 });

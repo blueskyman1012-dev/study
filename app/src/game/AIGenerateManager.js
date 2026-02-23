@@ -26,8 +26,12 @@ export class AIGenerateManager {
     game.isGenerating = false;
     game._needsRender = true;
     game._removeCancelOverlay();
-    // 2) 즉시 메인화면 전환
-    game.changeScreen(SCREENS.MAIN);
+    // 2) 즉시 메인화면 전환 (에러 안전)
+    try {
+      game.changeScreen(SCREENS.MAIN);
+    } catch (e) {
+      console.error('화면 전환 오류:', e);
+    }
     // 3) 결과를 자동 닫힘 토스트로 표시 (사용자 조작 불필요)
     if (resultMessage) {
       game.showToast(resultMessage);
@@ -91,11 +95,8 @@ export class AIGenerateManager {
       // 즉시 메인화면 전환 + 결과 모달 (await 안함)
       this._finishAndShowResult(resultMessage);
     } finally {
-      game.isGenerating = false;
-      game._needsRender = true;
-      game._removeCancelOverlay();
-      game.changeScreen(SCREENS.MAIN);
       this._aiGenerating = false;
+      this._safeCleanup(game);
     }
   }
 
@@ -105,11 +106,26 @@ export class AIGenerateManager {
     try {
       await this._doAIGenerateMenu();
     } finally {
-      this.game.isGenerating = false;
-      this.game._needsRender = true;
-      this.game._removeCancelOverlay();
-      this.game.changeScreen(SCREENS.MAIN);
       this._aiGenerating = false;
+      this._safeCleanup(this.game);
+    }
+  }
+
+  // 안전한 상태 복구 (에러가 발생해도 락이 풀리도록 try/catch)
+  _safeCleanup(game) {
+    try {
+      game.isGenerating = false;
+      game._needsRender = true;
+      game._removeCancelOverlay();
+      // 잔류 모달 제거 (showPrompt가 미해결된 채 남은 경우)
+      const modal = document.getElementById('custom-modal');
+      if (modal) modal.remove();
+      game.changeScreen(SCREENS.MAIN);
+    } catch (e) {
+      // changeScreen 등에서 에러가 나도 최소한 렌더링은 복구
+      console.error('AI 생성 정리 오류:', e);
+      game.isGenerating = false;
+      game._needsRender = true;
     }
   }
 
