@@ -104,23 +104,22 @@ html, body {
   box-shadow: 0 1px 6px rgba(59, 130, 246, 0.3);
 }
 
-/* 전투 중 이미지로 보기 버튼 - 화면 하단 고정 */
+/* 전투 중 이미지로 보기 버튼 - body 직속, fixed */
 #battle-image-btn {
   position: fixed;
-  bottom: 12px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  display: none;
-  width: 220px;
-  height: 44px;
+  width: 240px;
+  height: 48px;
   background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-  border: 2px solid #60a5fa;
-  border-radius: 22px;
+  border: 3px solid #60a5fa;
+  border-radius: 24px;
   color: #ffffff;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: bold;
   cursor: pointer;
-  z-index: 200;
+  z-index: 9999;
   text-align: center;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -128,11 +127,7 @@ html, body {
   align-items: center;
   justify-content: center;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.6);
-}
-
-#battle-image-btn.visible {
-  display: flex;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.7);
 }
 
 #battle-image-btn:active {

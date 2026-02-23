@@ -655,13 +655,9 @@ class App {
       }
     }
 
-    // 전투 중 이미지로 보기 버튼 (fixed 위치, 클래스만 토글)
+    // 전투 중 이미지로 보기 버튼 (fixed, style.display 직접 제어)
     if (this.battleImageBtn) {
-      if (this.game.currentScreen === SCREENS.BATTLE) {
-        this.battleImageBtn.classList.add('visible');
-      } else {
-        this.battleImageBtn.classList.remove('visible');
-      }
+      this.battleImageBtn.style.display = (this.game.currentScreen === SCREENS.BATTLE) ? 'flex' : 'none';
     }
 
     // 로그아웃 버튼
