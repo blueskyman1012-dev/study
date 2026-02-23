@@ -1,9 +1,29 @@
+// roundRect 폴리필
+function ensureRoundRect(ctx) {
+  if (!ctx.roundRect) {
+    ctx.roundRect = function(x, y, w, h, r) {
+      if (typeof r === 'number') r = [r, r, r, r];
+      const [tl, tr, br, bl] = r;
+      this.moveTo(x + tl, y);
+      this.lineTo(x + w - tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + tr);
+      this.lineTo(x + w, y + h - br);
+      this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+      this.lineTo(x + bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - bl);
+      this.lineTo(x, y + tl);
+      this.quadraticCurveTo(x, y, x + tl, y);
+    };
+  }
+}
+
 // 문제 데이터를 이미지(data URL)로 렌더링
 export function renderProblemCard(monster) {
   const canvas = document.createElement('canvas');
   const W = 360, PAD = 20;
   canvas.width = W;
   const ctx = canvas.getContext('2d');
+  ensureRoundRect(ctx);
 
   // 텍스트 줄바꿈 헬퍼
   const wrapText = (text, maxW, font) => {

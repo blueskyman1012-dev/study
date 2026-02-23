@@ -261,11 +261,17 @@ export class DialogManager {
       }
 
       return list.map((m) => {
-        // 원본 이미지가 있으면 원본 표시, 없으면 Canvas로 카드 이미지 생성
-        const imgSrc = m.imageData || renderProblemCard(m);
+        let imgSrc = m.imageData;
+        if (!imgSrc) {
+          try { imgSrc = renderProblemCard(m); } catch { imgSrc = ''; }
+        }
+
+        const imgHtml = imgSrc
+          ? `<img src="${imgSrc}" style="width:100%;border-radius:10px;cursor:pointer;display:block;" onclick="this.classList.toggle('pv-expanded');this.style.maxHeight=this.classList.contains('pv-expanded')?'none':'300px'" />`
+          : `<div style="padding:16px;background:rgba(99,102,241,0.1);border-radius:10px;color:#e2e8f0;font-size:15px;line-height:1.6;word-break:keep-all;">${escapeHtml(cleanQuestionText(m.question) || '문제 없음')}</div>`;
 
         return `<div style="margin-bottom:12px;" data-monster-id="${m.id}">
-          <img src="${imgSrc}" style="width:100%;border-radius:10px;cursor:pointer;display:block;" onclick="this.classList.toggle('pv-expanded');this.style.maxHeight=this.classList.contains('pv-expanded')?'none':'300px'" />
+          ${imgHtml}
           <div style="margin-top:6px;padding:8px 12px;background:rgba(30,30,60,0.8);border-radius:8px;font-size:13px;color:#94a3b8;">${escapeHtml(t('answerLabel'))}: <span style="color:#22c55e;font-weight:bold;">${escapeHtml(m.answer || '?')}</span></div>
         </div>`;
       }).join('');

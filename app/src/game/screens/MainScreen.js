@@ -74,7 +74,12 @@ export function renderMainScreen(game) {
   Renderer.drawButton(205, 250, 175, 42, `📋 ${t('problemViewer')}`, {
     bgColor: COLORS.BG_CARD, borderColor: 'rgba(99,102,241,0.4)', fontSize: 13, stroke: true
   });
-  game.registerClickArea('problemViewer', 205, 250, 175, 42, () => game.showProblemViewer());
+  game.registerClickArea('problemViewer', 205, 250, 175, 42, () => {
+    game.showProblemViewer().catch(err => {
+      console.error('문제 보기 오류:', err);
+      game.showModal('오류: ' + err.message);
+    });
+  });
 
   // === 던전 입장 ===
   Renderer.drawButton(20, 310, 360, 65, t('enterDungeon'), { bgColor: COLORS.ACCENT, fontSize: 22, stroke: true });
