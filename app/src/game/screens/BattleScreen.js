@@ -128,10 +128,10 @@ export function renderBattleScreen(game) {
 
   // 이미지로 보기 버튼
   const imgBtnY = qCardY + qCardH + 6;
-  Renderer.drawButton(20, imgBtnY, 360, 34, '📷 이미지로 보기', {
-    bgColor: 'rgba(59,130,246,0.2)', borderColor: '#3b82f6', fontSize: 14, stroke: true
+  Renderer.drawButton(20, imgBtnY, 360, 36, '📷 이미지로 보기', {
+    bgColor: '#1e40af', borderColor: '#60a5fa', fontSize: 15, stroke: true
   });
-  game.registerClickArea('viewQuestion', 20, imgBtnY, 360, 34, () => game.battleManager.showFullQuestion());
+  game.registerClickArea('viewQuestion', 20, imgBtnY, 360, 36, () => game.battleManager.showFullQuestion());
 
   // 선택지
   const choices = monster.choices || ['①', '②', '③', '④'];
