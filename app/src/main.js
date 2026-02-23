@@ -598,22 +598,18 @@ class App {
     this._cachedScale = rect.width / GAME_CONFIG.CANVAS_WIDTH;
   }
 
-  gameLoop() {
-    this.game.update();
+  _updateHTMLButtons() {
+    const isMain = this.game.currentScreen === SCREENS.MAIN && this.game.guideStep === null && !this.game.isGenerating;
 
-    if (!this.game._needsRender) {
-      this._animFrameId = requestAnimationFrame(() => this.gameLoop());
-      return;
+    // 캔버스 rect 갱신 (스크롤/리사이즈 대응)
+    if (!this._cachedRect && this.canvas) {
+      this._updateButtonLayout();
     }
-    this.game._needsRender = false;
-    this.game.render();
 
-    // 메인 화면에서만 오답등록 버튼 표시
+    // 오답등록 버튼
     if (this.registerBtn) {
-      const isMain = this.game.currentScreen === SCREENS.MAIN && this.game.guideStep === null && !this.game.isGenerating;
       if (isMain) {
         this.registerBtn.classList.add('visible');
-        this.registerBtn.style.opacity = Renderer.getUiOpacity();
         if (this._cachedRect) {
           const s = this._cachedScale;
           const r = this._cachedRect;
@@ -628,32 +624,42 @@ class App {
       }
     }
 
-    // 메인 화면에서만 문제 보기 버튼 표시
+    // 문제 보기 버튼 (오답등록 바로 아래)
     if (this.problemViewerBtn) {
-      const isMain = this.game.currentScreen === SCREENS.MAIN && this.game.guideStep === null && !this.game.isGenerating;
       if (isMain) {
         this.problemViewerBtn.classList.add('visible');
-        this.problemViewerBtn.style.opacity = Renderer.getUiOpacity();
         if (this._cachedRect) {
           const s = this._cachedScale;
           const r = this._cachedRect;
           this.problemViewerBtn.style.left = `${r.left + 20 * s}px`;
-          this.problemViewerBtn.style.top = `${r.top + 470 * s}px`;
+          this.problemViewerBtn.style.top = `${r.top + 462 * s}px`;
           this.problemViewerBtn.style.width = `${360 * s}px`;
-          this.problemViewerBtn.style.height = `${50 * s}px`;
-          this.problemViewerBtn.style.fontSize = `${17 * s}px`;
+          this.problemViewerBtn.style.height = `${55 * s}px`;
+          this.problemViewerBtn.style.fontSize = `${18 * s}px`;
         }
       } else {
         this.problemViewerBtn.classList.remove('visible');
       }
     }
 
-    // 메인 화면에서만 로그아웃 버튼 표시
+    // 로그아웃 버튼
     if (this._logoutBtn) {
-      const isMain = this.game.currentScreen === SCREENS.MAIN;
       this._logoutBtn.style.display = isMain ? '' : 'none';
-      if (isMain) this._logoutBtn.style.opacity = Renderer.getUiOpacity();
     }
+  }
+
+  gameLoop() {
+    this.game.update();
+
+    // HTML 버튼 표시/숨김은 매 프레임 처리 (early return 전에 실행)
+    this._updateHTMLButtons();
+
+    if (!this.game._needsRender) {
+      this._animFrameId = requestAnimationFrame(() => this.gameLoop());
+      return;
+    }
+    this.game._needsRender = false;
+    this.game.render();
 
     this._animFrameId = requestAnimationFrame(() => this.gameLoop());
   }

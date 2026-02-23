@@ -75,14 +75,14 @@ export function renderMainScreen(game) {
 
   // ── y=390~460: HTML 오답등록 버튼 ──
 
-  // ── y=470~520: HTML 문제 보기 버튼 ──
+  // ── y=462~517: HTML 문제 보기 버튼 ──
 
   // === 통계 & 상점 & 설정 & 업적 ===
   const menuBtnW = 85;
   const menuBtnH = 55;
   const menuBtnGap = 8;
   const menuStartX = 20;
-  const menuY = 535;
+  const menuY = 530;
 
   Renderer.drawButton(menuStartX, menuY, menuBtnW, menuBtnH, t('stats'), { bgColor: COLORS.BG_CARD, borderColor: '#38bdf8', fontSize: 15, stroke: true });
   game.registerClickArea('stats', menuStartX, menuY, menuBtnW, menuBtnH, () => game.changeScreen(SCREENS.STATS));
@@ -99,15 +99,15 @@ export function renderMainScreen(game) {
   // === AI 상태 ===
   const hasSmilePrintKey = problemGeneratorService.hasApiKey();
   if (hasSmilePrintKey) {
-    Renderer.drawButton(20, 605, 360, 48, t('aiGenerate'), {
+    Renderer.drawButton(20, 600, 360, 48, t('aiGenerate'), {
       bgColor: '#1d4ed8', borderColor: '#4b8df8', fontSize: 16, stroke: true
     });
-    game.registerClickArea('aiGenerate', 20, 605, 360, 48, () => game.showAIGenerateMenu());
+    game.registerClickArea('aiGenerate', 20, 600, 360, 48, () => game.showAIGenerateMenu());
   } else {
-    Renderer.roundRect(20, 605, 360, 40, 12, COLORS.BG_CARD);
+    Renderer.roundRect(20, 600, 360, 40, 12, COLORS.BG_CARD);
     const hasGemini = geminiService.hasApiKey();
     const aiStatus = hasGemini ? t('aiConnected') : t('aiNotConnected');
-    Renderer.drawText(aiStatus, 200, 620, {
+    Renderer.drawText(aiStatus, 200, 615, {
       font: '13px system-ui', color: hasGemini ? COLORS.SUCCESS : COLORS.TEXT_SECONDARY, align: 'center', stroke: true
     });
   }
