@@ -97,7 +97,7 @@ export function renderBattleScreen(game) {
 
   // 문제 카드
   const qCardY = 272;
-  const qCardH = 128;
+  const qCardH = 110;
   Renderer.roundRect(20, qCardY, 360, qCardH, 20, COLORS.BG_CARD);
   Renderer.roundRect(20, qCardY, 360, qCardH, 20, null, COLORS.ACCENT);
   Renderer.roundRect(160, qCardY - 12, 80, 24, 12, COLORS.ACCENT);
@@ -105,7 +105,7 @@ export function renderBattleScreen(game) {
 
   const questionText = cleanQuestionText(monster.question) || t('loadingQuestion');
   const maxCharsPerLine = 22;
-  const maxLines = 6;
+  const maxLines = 5;
   const lineHeight = 18;
   const fontSize = 13;
 
@@ -126,11 +126,12 @@ export function renderBattleScreen(game) {
     Renderer.drawText(line, 200, startY + i * lineHeight, { font: `bold ${fontSize}px system-ui`, align: 'center' });
   });
 
-  // 이미지 문제 표시 + 크게 보기 아이콘
-  const hasImage = !!monster.imageData;
-  const viewIcon = hasImage ? '📷' : '🔍';
-  Renderer.drawText(viewIcon, 365, qCardY + 8, { font: '12px system-ui', color: COLORS.ACCENT_LIGHT, align: 'center' });
-  game.registerClickArea('viewQuestion', 20, qCardY, 360, qCardH, () => game.battleManager.showFullQuestion());
+  // 이미지로 보기 버튼
+  const imgBtnY = qCardY + qCardH + 6;
+  Renderer.drawButton(20, imgBtnY, 360, 34, '📷 이미지로 보기', {
+    bgColor: 'rgba(59,130,246,0.2)', borderColor: '#3b82f6', fontSize: 14, stroke: true
+  });
+  game.registerClickArea('viewQuestion', 20, imgBtnY, 360, 34, () => game.battleManager.showFullQuestion());
 
   // 선택지
   const choices = monster.choices || ['①', '②', '③', '④'];
@@ -139,7 +140,7 @@ export function renderBattleScreen(game) {
   const gapX = 10;
   const gapY = 8;
   const startX = 20;
-  const choiceStartY = 415;
+  const choiceStartY = 428;
 
   choices.forEach((choice, i) => {
     const col = i % 2;
