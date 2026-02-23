@@ -4,8 +4,6 @@ import { SCREENS, COLORS, SUBJECTS } from '../../utils/constants.js';
 import { t } from '../../i18n/i18n.js';
 
 export function renderRegisterScreen(game) {
-  Renderer.drawGrid();
-
   // 헤더
   Renderer.roundRect(0, 0, 400, 60, 0, COLORS.BG_SECONDARY);
   Renderer.drawText(t('subjectSelect'), 200, 20, { font: 'bold 18px system-ui', align: 'center' });

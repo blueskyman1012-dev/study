@@ -31,6 +31,7 @@ describe('Renderer', () => {
       drawImage: vi.fn(),
       save: vi.fn(),
       restore: vi.fn(),
+      setTransform: vi.fn(),
       globalAlpha: 1,
       createLinearGradient: vi.fn(() => ({
         addColorStop: vi.fn()

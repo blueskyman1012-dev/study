@@ -60,6 +60,7 @@ export class RegisterManager {
           formula = result.formula || '';
 
           game.isGenerating = false;
+          game._needsRender = true;
           const displayQ = question.length > 100 ? question.substring(0, 100) + '...' : question;
           const answerDisplay = answers.length > 1 ? answers.join(', ') : answer;
           const confirmed = await game.showConfirm(t('aiAnalyzed', displayQ, answerDisplay, topic, explanation));
@@ -77,6 +78,7 @@ export class RegisterManager {
             game.generatingMessage = t('analyzing', 'Gemini');
             const result = await Promise.race([geminiService.analyzeImage(imageData, subjectName), new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))]);
             game.isGenerating = false;
+            game._needsRender = true;
             if (result && result.question) {
               question = result.question; answer = result.answer || '';
               choices = result.choices || []; correctIndex = result.correctIndex || 0;
@@ -90,6 +92,7 @@ export class RegisterManager {
             } else { throw new Error(t('noAnalysisResult')); }
           } catch (geminiErr) {
             game.isGenerating = false;
+            game._needsRender = true;
             await game.showModal(t('aiFailed', this._safeErrorMsg(err)));
             question = await game.showPrompt(t('inputQuestion')) || '';
             if (!question) return;
@@ -97,6 +100,7 @@ export class RegisterManager {
           }
         } else {
           game.isGenerating = false;
+          game._needsRender = true;
           await game.showModal(t('aiFailed', this._safeErrorMsg(err)));
           question = await game.showPrompt(t('inputQuestion')) || '';
           if (!question) return;
@@ -113,6 +117,7 @@ export class RegisterManager {
         const result = await Promise.race([geminiService.analyzeImage(imageData, subjectName), new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))]);
         if (game._generationCancelled) { return; }
         game.isGenerating = false;
+        game._needsRender = true;
         if (result && result.question) {
           question = result.question; answer = result.answer || '';
           choices = result.choices || []; correctIndex = result.correctIndex || 0;
@@ -126,6 +131,7 @@ export class RegisterManager {
         } else { throw new Error(t('noAnalysisResult')); }
       } catch (err) {
         game.isGenerating = false;
+        game._needsRender = true;
         await game.showModal(t('aiFailed', this._safeErrorMsg(err)));
         question = await game.showPrompt(t('inputQuestion')) || '';
         if (!question) return;
@@ -138,6 +144,8 @@ export class RegisterManager {
     }
     } finally {
       game.isGenerating = false;
+      game._needsRender = true;
+      game._removeCancelOverlay();
     }
 
     if (!answer && choices && choices.length > 0) {

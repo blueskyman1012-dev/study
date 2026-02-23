@@ -19,7 +19,7 @@ export class AIGenerateManager {
     ]);
   }
 
-  // 생성 완료 후 즉시 메인화면 복귀 + 결과 모달 표시
+  // 생성 완료 후 즉시 메인화면 복귀 + 결과 자동 닫힘 알림
   _finishAndShowResult(resultMessage) {
     const game = this.game;
     // 1) 생성 상태 해제
@@ -28,9 +28,9 @@ export class AIGenerateManager {
     game._removeCancelOverlay();
     // 2) 즉시 메인화면 전환
     game.changeScreen(SCREENS.MAIN);
-    // 3) 결과 모달은 메인화면 위에 표시 (await 안함 = 화면전환 안 막힘)
+    // 3) 결과를 자동 닫힘 토스트로 표시 (사용자 조작 불필요)
     if (resultMessage) {
-      game.showModal(resultMessage);
+      game.showToast(resultMessage);
     }
   }
 
@@ -92,7 +92,9 @@ export class AIGenerateManager {
       this._finishAndShowResult(resultMessage);
     } finally {
       game.isGenerating = false;
+      game._needsRender = true;
       game._removeCancelOverlay();
+      game.changeScreen(SCREENS.MAIN);
       this._aiGenerating = false;
     }
   }
@@ -104,7 +106,9 @@ export class AIGenerateManager {
       await this._doAIGenerateMenu();
     } finally {
       this.game.isGenerating = false;
+      this.game._needsRender = true;
       this.game._removeCancelOverlay();
+      this.game.changeScreen(SCREENS.MAIN);
       this._aiGenerating = false;
     }
   }

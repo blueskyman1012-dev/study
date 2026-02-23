@@ -11,8 +11,8 @@ export function renderBattleScreen(game) {
 
   const effects = game.effects;
 
-  // 상단 HUD
-  Renderer.roundRect(0, 0, 400, 80, 0, COLORS.BG_SECONDARY);
+  // 상단 HUD (반투명 → 그리드 배경 투과)
+  Renderer.roundRect(0, 0, 400, 80, 0, 'rgba(18,18,26,0.85)');
 
   Renderer.drawText('HP', 20, 20, { font: '12px system-ui', color: COLORS.TEXT_SECONDARY });
   Renderer.drawHPBar(50, 18, 150, 18, player.currentHp, player.maxHp, COLORS.HP_PLAYER);
@@ -43,7 +43,7 @@ export function renderBattleScreen(game) {
 
   // 몬스터 영역
   const bossType = monster.bossType;
-  let monsterBgColor = COLORS.BG_CARD;
+  let monsterBgColor = 'rgba(26,26,36,0.8)';
   let monsterCircleColor = 'rgba(239,68,68,0.1)';
   let hpBarColor = COLORS.HP_ENEMY;
   let monsterIcon = monster.icon || '👾';
@@ -98,7 +98,7 @@ export function renderBattleScreen(game) {
   // 문제 카드
   const qCardY = 272;
   const qCardH = 110;
-  Renderer.roundRect(20, qCardY, 360, qCardH, 20, COLORS.BG_CARD);
+  Renderer.roundRect(20, qCardY, 360, qCardH, 20, 'rgba(26,26,36,0.85)');
   Renderer.roundRect(20, qCardY, 360, qCardH, 20, null, COLORS.ACCENT);
   Renderer.roundRect(160, qCardY - 12, 80, 24, 12, COLORS.ACCENT);
   Renderer.drawText('QUESTION', 200, qCardY - 7, { font: 'bold 11px system-ui', align: 'center' });
@@ -143,7 +143,7 @@ export function renderBattleScreen(game) {
     const x = startX + col * (choiceWidth + gapX);
     const y = choiceStartY + row * (choiceHeight + gapY);
 
-    Renderer.roundRect(x, y, choiceWidth, choiceHeight, 12, COLORS.BG_CARD);
+    Renderer.roundRect(x, y, choiceWidth, choiceHeight, 12, 'rgba(26,26,36,0.85)');
     Renderer.roundRect(x, y, choiceWidth, choiceHeight, 12, null, 'rgba(99,102,241,0.3)');
     Renderer.drawText(`${i + 1}.`, x + 15, y + choiceHeight / 2 - 5, { font: 'bold 14px system-ui', color: COLORS.ACCENT_LIGHT });
 
@@ -176,8 +176,8 @@ export function renderBattleScreen(game) {
     });
   }
 
-  // 하단 버튼
-  Renderer.roundRect(0, 600, 400, 100, 0, COLORS.BG_SECONDARY);
+  // 하단 버튼 (반투명 → 그리드 배경 투과)
+  Renderer.roundRect(0, 600, 400, 100, 0, 'rgba(18,18,26,0.85)');
 
   const hintCount = player.inventory?.hintTicket || 0;
   const hasHint = hintCount > 0;

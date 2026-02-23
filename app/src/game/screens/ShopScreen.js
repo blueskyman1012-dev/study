@@ -56,8 +56,6 @@ export function renderShopScreen(game) {
   const shopManager = game.shopManager;
   const W = 400, H = 700;
 
-  Renderer.drawGrid();
-
   // === 헤더 (0~50) ===
   Renderer.roundRect(0, 0, W, 50, 0, COLORS.BG_SECONDARY);
   Renderer.drawText(t('shopTitle'), W / 2, 16, { font: 'bold 20px system-ui', align: 'center' });

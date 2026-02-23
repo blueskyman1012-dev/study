@@ -51,8 +51,6 @@ export function renderSettingsFixedHeader(game) {
 }
 
 export function renderSettingsScreen(game) {
-  Renderer.drawGrid();
-
   // 뒤로가기 클릭 (스크롤 보정용)
   game.registerClickArea('back', 10, 10, 80, 35, () => game.changeScreen(SCREENS.MAIN));
 

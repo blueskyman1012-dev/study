@@ -4,8 +4,6 @@ import { SCREENS, GAME_CONFIG, COLORS, SUBJECTS } from '../../utils/constants.js
 import { t } from '../../i18n/i18n.js';
 
 export function renderResultScreen(game) {
-  Renderer.drawGrid();
-
   const isWin = game.currentRun?.result === 'clear';
   const title = isWin ? t('cleared') : t('failed');
   const titleColor = isWin ? COLORS.SUCCESS : COLORS.DANGER;
@@ -36,8 +34,8 @@ export function renderResultScreen(game) {
 
   Renderer.drawText(title, 200, 55 - scrollY, { font: 'bold 28px system-ui', color: titleColor, align: 'center' });
 
-  // 메인 카드
-  Renderer.roundRect(25, 90 - scrollY, 350, cardH, 16, COLORS.BG_CARD);
+  // 메인 카드 (반투명 → 그리드 배경 투과)
+  Renderer.roundRect(25, 90 - scrollY, 350, cardH, 16, 'rgba(26,26,36,0.85)');
 
   let y = 115 - scrollY;
 

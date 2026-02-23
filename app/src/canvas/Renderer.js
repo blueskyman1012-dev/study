@@ -3,13 +3,13 @@ import { COLORS } from '../utils/constants.js';
 import { safeGetItem, safeSetItem } from '../utils/storage.js';
 
 export const BG_THEMES = [
-  { id: 'default', bg: '#0a0a0f', grid: 'rgba(120,130,255,0.5)', gridSub: 'rgba(120,130,255,0.18)', glow: 'rgba(99,102,241,0.4)' },
-  { id: 'emerald', bg: '#060f0a', grid: 'rgba(52,211,153,0.5)', gridSub: 'rgba(52,211,153,0.18)', glow: 'rgba(16,185,129,0.4)' },
-  { id: 'crimson', bg: '#0f0606', grid: 'rgba(248,113,113,0.5)', gridSub: 'rgba(248,113,113,0.18)', glow: 'rgba(239,68,68,0.4)' },
-  { id: 'amber', bg: '#0f0b04', grid: 'rgba(251,191,36,0.5)', gridSub: 'rgba(251,191,36,0.18)', glow: 'rgba(245,158,11,0.4)' },
-  { id: 'violet', bg: '#0b060f', grid: 'rgba(167,139,250,0.5)', gridSub: 'rgba(167,139,250,0.18)', glow: 'rgba(139,92,246,0.4)' },
-  { id: 'cyan', bg: '#040b0f', grid: 'rgba(34,211,238,0.5)', gridSub: 'rgba(34,211,238,0.18)', glow: 'rgba(6,182,212,0.4)' },
-  { id: 'rose', bg: '#0f0408', grid: 'rgba(251,113,133,0.5)', gridSub: 'rgba(251,113,133,0.18)', glow: 'rgba(244,63,94,0.4)' },
+  { id: 'default', bg: '#0a0a0f', grid: 'rgba(120,130,255,0.7)', gridSub: 'rgba(120,130,255,0.25)', glow: 'rgba(99,102,241,0.8)' },
+  { id: 'emerald', bg: '#060f0a', grid: 'rgba(52,211,153,0.7)', gridSub: 'rgba(52,211,153,0.25)', glow: 'rgba(16,185,129,0.8)' },
+  { id: 'crimson', bg: '#0f0606', grid: 'rgba(248,113,113,0.7)', gridSub: 'rgba(248,113,113,0.25)', glow: 'rgba(239,68,68,0.8)' },
+  { id: 'amber', bg: '#0f0b04', grid: 'rgba(251,191,36,0.7)', gridSub: 'rgba(251,191,36,0.25)', glow: 'rgba(245,158,11,0.8)' },
+  { id: 'violet', bg: '#0b060f', grid: 'rgba(167,139,250,0.7)', gridSub: 'rgba(167,139,250,0.25)', glow: 'rgba(139,92,246,0.8)' },
+  { id: 'cyan', bg: '#040b0f', grid: 'rgba(34,211,238,0.7)', gridSub: 'rgba(34,211,238,0.25)', glow: 'rgba(6,182,212,0.8)' },
+  { id: 'rose', bg: '#0f0408', grid: 'rgba(251,113,133,0.7)', gridSub: 'rgba(251,113,133,0.25)', glow: 'rgba(244,63,94,0.8)' },
 ];
 
 export const Renderer = {
@@ -33,6 +33,7 @@ export const Renderer = {
     this.ctx = ctx;
     this.width = width;
     this.height = height;
+    this._dpr = Math.min(window.devicePixelRatio || 1, 3);
     this._gridCache = null;
     // 저장된 사용자 설정 복원 (구매한 테마/투명도 유지)
     this._loadBgTheme();
@@ -126,8 +127,8 @@ export const Renderer = {
     });
   },
 
-  // 화면 클리어
-  clear() {
+  // 화면 클리어 (배경색 + 그리드를 항상 함께 그림)
+  clear(skipGrid) {
     if (this._bgImage && this._bgImage.complete) {
       this.ctx.drawImage(this._bgImage, 0, 0, this.width, this.height);
       // 반투명 오버레이로 UI 가독성 확보
@@ -136,16 +137,18 @@ export const Renderer = {
     } else {
       this.ctx.fillStyle = this._bgTheme?.bg || COLORS.BG_PRIMARY;
       this.ctx.fillRect(0, 0, this.width, this.height);
+      if (!skipGrid) this.drawGrid();
     }
   },
 
   // 그리드 패턴 (오프스크린 캐싱) - 이미지 배경일 때는 그리지 않음
+  // 항상 캔버스 절대 위치에 고정 (translate/scroll 영향 안 받음)
   drawGrid() {
     // 이미지 배경이 설정되어 있으면 그리드 숨김
     if (this._bgImage && this._bgImage.complete) return;
 
     if (!this._gridCache) {
-      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const dpr = this._dpr || 1;
       const theme = this._bgTheme || BG_THEMES[0];
       const offscreen = document.createElement('canvas');
       offscreen.width = this.width * dpr;
@@ -155,9 +158,9 @@ export const Renderer = {
 
       // 주 그리드 (네온 효과)
       oc.strokeStyle = theme.grid;
-      oc.lineWidth = 1;
+      oc.lineWidth = 1.5;
       oc.shadowColor = theme.glow;
-      oc.shadowBlur = 3;
+      oc.shadowBlur = 8;
       for (let x = 0; x <= this.width; x += 40) {
         oc.beginPath(); oc.moveTo(x, 0); oc.lineTo(x, this.height); oc.stroke();
       }
@@ -176,7 +179,13 @@ export const Renderer = {
       }
       this._gridCache = offscreen;
     }
-    this.ctx.drawImage(this._gridCache, 0, 0, this.width, this.height);
+    // 현재 transform 무시 → 항상 캔버스 고정 위치에 그리기
+    const ctx = this.ctx;
+    ctx.save();
+    const dpr = this._dpr || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.drawImage(this._gridCache, 0, 0, this.width, this.height);
+    ctx.restore();
   },
 
   // 둥근 사각형

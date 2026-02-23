@@ -235,6 +235,7 @@ export class Game {
       } else if (Date.now() - this._generatingStartTime > 65000) {
         this._generationCancelled = true;
         this.isGenerating = false;
+        this._needsRender = true;
         this._removeCancelOverlay();
         this.changeScreen(SCREENS.MAIN);
       }
@@ -515,6 +516,7 @@ export class Game {
   showAnalyzingScreen(apiName) { return this.dialogManager.showAnalyzingScreen(apiName); }
   showGeneratingScreen(count) { return this.dialogManager.showGeneratingScreen(count); }
   showModal(message) { return this.dialogManager.showModal(message); }
+  showToast(message, duration) { return this.dialogManager.showToast(message, duration); }
   showConfirm(message) { return this.dialogManager.showConfirm(message); }
   showPrompt(message, defaultValue) { return this.dialogManager.showPrompt(message, defaultValue); }
 

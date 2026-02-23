@@ -37,6 +37,39 @@ export class DialogManager {
     Renderer.drawText(t('pleaseWait'), 200, 370, { font: '14px system-ui', color: COLORS.TEXT_SECONDARY, align: 'center' });
   }
 
+  showToast(message, duration = 3000) {
+    const existing = document.getElementById('toast-notification');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'toast-notification';
+    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10001;max-width:340px;width:90%;pointer-events:auto;animation:toastIn 0.3s ease;font-family:system-ui,-apple-system,sans-serif;';
+
+    toast.innerHTML = `
+      <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:14px;padding:16px 20px;color:#e2e8f0;border:1px solid #22c55e;box-shadow:0 4px 20px rgba(34,197,94,0.3);white-space:pre-wrap;font-size:14px;line-height:1.5;max-height:40vh;overflow-y:auto;">
+        ${escapeHtml(message)}
+      </div>
+    `;
+
+    // 애니메이션 스타일 주입
+    if (!document.getElementById('toast-style')) {
+      const style = document.createElement('style');
+      style.id = 'toast-style';
+      style.textContent = '@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}@keyframes toastOut{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-20px)}}';
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(toast);
+    toast.onclick = () => toast.remove();
+
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.style.animation = 'toastOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, duration);
+  }
+
   showModal(message) {
     return new Promise((resolve) => {
       const existing = document.getElementById('custom-modal');

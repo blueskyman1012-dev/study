@@ -28,8 +28,6 @@ function getProgress(achv, player) {
 }
 
 export function renderAchievementScreen(game) {
-  Renderer.drawGrid();
-
   const player = game.playerManager.player;
   player._cachedDamage = game.playerManager.getTotalDamage();
   player._cachedMaxHp = game.playerManager.getTotalMaxHp();
